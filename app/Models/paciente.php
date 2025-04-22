@@ -58,13 +58,13 @@ class Paciente extends Model
     {
         $lastPaciente = self::latest('idPaciente')->first();
 
-        if ($lastPaciente && preg_match('/PA(\d+)/', $lastPaciente->codigo, $matches)) {
+        if ($lastPaciente && preg_match('/PAC(\d+)/', $lastPaciente->codigo, $matches)) {
             $newNumber = intval($matches[1]) + 1;
         } else {
             $newNumber = 1;
         }
 
-        return 'PA' . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+        return 'PAC' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
     
 }

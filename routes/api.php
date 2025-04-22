@@ -90,6 +90,7 @@ Route::controller(CategoriaController::class)->prefix('categorias')->group(funct
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes'); 
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+    Route::get('/dashboard/psicologo', 'psicologoDashboard');
     Route::get('/', 'showAllCitasByPsicologo'); 
     Route::post('/', 'createCita');
     Route::get('/{id}', 'showCitaById');
