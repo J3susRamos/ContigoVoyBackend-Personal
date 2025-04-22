@@ -7,12 +7,14 @@ use App\Http\Requests\PostUser\PostUser;
 use App\Http\Requests\PostPsicologo\PostPsicologo;
 use App\Http\Requests\PutPsicologo\PutPsicologo;
 use App\Http\Requests\PutUser\PutUser;
+use App\Models\Cita;
 use App\Models\Especialidad;
 use App\Models\Psicologo;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class PsicologosController extends Controller
 {
@@ -197,6 +199,58 @@ class PsicologosController extends Controller
                 ->internalErrorResponse('Ocurrió un problema al cambiar el estado del psicólogo: ' . $e->getMessage())
                 ->send();
         }
+    }
+
+    public function psicologoDashboard()
+    {
+        $userId = Auth::id();
+        $psicologo = Psicologo::where('user_id', $userId)->first();
+    
+        if (!$psicologo) {
+            return HttpResponseHelper::make()
+                ->notFoundResponse('No se encontró un psicólogo asociado a este usuario.')
+                ->send();
+        }
+    
+        $idPsicologo = $psicologo->idPsicologo;
+    
+        // Obtener citas del psicólogo
+        $totalCitas = Cita::where('idPsicologo', $idPsicologo)->count();
+        $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
+        $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'pendiente')->count();
+        $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
+
+        $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
+        ->whereIn('estado_Cita', ['completada', 'pendiente'])  
+        ->sum('duracion'); 
+        
+        // Total de pacientes únicos
+        $totalPacientes = Cita::where('idPsicologo', $idPsicologo)
+        ->whereNotNull('idPaciente')
+        ->distinct('idPaciente')
+        ->count('idPaciente');
+
+        // Nuevos pacientes en los últimos 30 días (por su primera cita)
+        $nuevosPacientes = Cita::select('idPaciente')
+        ->where('idPsicologo', $idPsicologo)
+        ->whereNotNull('idPaciente')
+        ->selectRaw('MIN(fecha_Cita) as primera_cita, idPaciente')
+        ->groupBy('idPaciente')
+        ->havingRaw('primera_cita >= ?', [now()->subDays(30)])
+        ->get()
+        ->count();
+    
+        return HttpResponseHelper::make()
+            ->successfulResponse('Datos del dashboard cargados correctamente',[
+               'total_citas' => $totalCitas,
+            'citas_completadas' => $citasCompletadas,
+            'citas_pendientes' => $citasPendientes,
+            'citas_canceladas' => $citasCanceladas,
+            'total_minutos_reservados' => $totalMinutosReservados,
+            'total_pacientes' => $totalPacientes,
+            'nuevos_pacientes' => $nuevosPacientes, 
+            ])
+            ->send();
     }
 
     public function DeletePsicologo(int $id)
