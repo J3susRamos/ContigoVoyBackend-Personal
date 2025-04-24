@@ -38,6 +38,9 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
         Route::put('/{id}', 'updatePaciente');
         Route::delete('/{id}', 'destroyPaciente');
         Route::get('/citas/{id}', 'getCitasPaciente');
+        Route::get('/estadisticas/genero', 'getPacientesGenero');
+        Route::get('/estadisticas/edad', 'getPacientesPorEdad');
+        Route::get('/estadisticas/lugar', 'getPacientesPorLugar');
     });
 });
 
@@ -90,6 +93,8 @@ Route::controller(CategoriaController::class)->prefix('categorias')->group(funct
 
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes');
+    Route::get('/estadisticas', 'getCitasPorEstado');
+    Route::get('/periodo', 'getCitasPorPeriodo');
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
         Route::get('/', 'showAllCitasByPsicologo');
         Route::post('/', 'createCita');

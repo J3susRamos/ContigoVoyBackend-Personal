@@ -11,6 +11,7 @@ use App\Models\Paciente;
 use App\Models\Psicologo;
 use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
+use Illuminate\Container\Attributes\DB;
 use Illuminate\Support\Facades\Auth;
 
 class PacienteController extends Controller
@@ -188,6 +189,112 @@ class PacienteController extends Controller
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al eliminar el blog: ' . $e->getMessage())
+                ->send();
+        }
+    }
+
+    public function getPacientesGenero()
+    {
+        try {
+            $userId = Auth::id();
+            $psicologo = Psicologo::where('user_id', $userId)->first();
+
+            if (!$psicologo) {
+                return HttpResponseHelper::make()
+                    ->unauthorizedResponse('No se tiene acceso como psicólogo.')
+                    ->send();
+            }
+
+            // Obtener el conteo de pacientes por género
+            $estadisticas = Paciente::where('idPsicologo', $psicologo->idPsicologo)
+                ->get()
+                ->groupBy(function ($paciente) {
+                    return $paciente->genero ?: 'Desconocido';
+                })
+                ->map(function ($pacientes) {
+                    return $pacientes->count();
+                });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Estadísticas de pacientes por género obtenidas correctamente', $estadisticas)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Ocurrió un problema al procesar la solicitud. ' . $e->getMessage())
+                ->send();
+        }
+    }
+
+    public function getPacientesPorEdad()
+    {
+        try {
+            $userId = Auth::id();
+            $psicologo = Psicologo::where('user_id', $userId)->first();
+
+            if (!$psicologo) {
+                return HttpResponseHelper::make()
+                    ->unauthorizedResponse('No se tiene acceso como psicólogo.')
+                    ->send();
+            }
+
+            // Obtener el conteo de pacientes por rango de edad
+            $estadisticas = Paciente::where('idPsicologo', $psicologo->idPsicologo)
+                ->get()
+                ->groupBy(function ($paciente) {
+                    $edad = Carbon::parse($paciente->fecha_nacimiento)->age;
+                    if ($edad <= 12) {
+                        return '0-12';
+                    } elseif ($edad <= 17) {
+                        return '13-17';
+                    } elseif ($edad <= 24) {
+                        return '18-24';
+                    } elseif ($edad <= 34) {
+                        return '25-34';
+                    } elseif ($edad <= 44) {
+                        return '35-44';
+                    } else {
+                        return '45+';
+                    }
+                })
+                ->map(function ($pacientes) {
+                    return $pacientes->count();
+                });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Estadísticas de pacientes por rango de edad obtenidas correctamente', $estadisticas)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Ocurrió un problema al procesar la solicitud. ' . $e->getMessage())
+                ->send();
+        }
+    }
+
+    public function getPacientesPorLugar()
+    {
+        try {
+            $userId = Auth::id();
+            $psicologo = Psicologo::where('user_id', $userId)->first();
+
+            if (!$psicologo) {
+                return HttpResponseHelper::make()
+                    ->unauthorizedResponse('No se tiene acceso como psicólogo.')
+                    ->send();
+            }
+
+            $estadisticas = Paciente::where('idPsicologo', $psicologo->idPsicologo)
+                ->get()
+                ->groupBy('direccion') // <-- Agrupar por lugar
+                ->map(function ($pacientes) {
+                    return $pacientes->count();
+                });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Estadísticas de pacientes por lugar obtenidas correctamente', $estadisticas)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Ocurrió un problema al procesar la solicitud. ' . $e->getMessage())
                 ->send();
         }
     }
