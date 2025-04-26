@@ -135,7 +135,7 @@ class PacienteController extends Controller
                     'codigo' => $paciente->codigo,
                     'DNI' => $paciente->DNI,
                     'nombre' => $paciente->nombre . ' ' . $paciente->apellido,
-                    'correo' => $paciente->email,
+                    'email' => $paciente->email,
                     'celular' => $paciente->celular,
                 ];
             });
