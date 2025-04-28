@@ -39,8 +39,8 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
         Route::delete('/{id}', 'destroyPaciente');
         Route::get('/citas/{id}', 'getCitasPaciente');
         Route::get('/estadisticas/genero', 'getPacientesGenero');
-        Route::get('/estadisticas/edad', 'getPacientesPorEdad');
-        Route::get('/estadisticas/lugar', 'getPacientesPorLugar');
+        Route::get('/estadisticas/edad', 'getPacientesEdad');
+        Route::get('/estadisticas/lugar', 'getPacientesLugar');
     });
 });
 

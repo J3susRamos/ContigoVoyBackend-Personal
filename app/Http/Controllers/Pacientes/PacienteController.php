@@ -225,7 +225,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesPorEdad()
+    public function getPacientesEdad()
     {
         try {
             $userId = Auth::id();
@@ -270,7 +270,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesPorLugar()
+    public function getPacientesLugar()
     {
         try {
             $userId = Auth::id();
@@ -284,7 +284,12 @@ class PacienteController extends Controller
 
             $estadisticas = Paciente::where('idPsicologo', $psicologo->idPsicologo)
                 ->get()
-                ->groupBy('direccion') // <-- Agrupar por lugar
+                ->groupBy(function ($paciente) {
+                    // Extraer solo el último texto después de la última coma
+                    $direccion = $paciente->direccion;
+                    $partes = explode(',', $direccion);
+                    return trim(end($partes)); // Obtener la última parte y eliminar espacios
+                })
                 ->map(function ($pacientes) {
                     return $pacientes->count();
                 });
