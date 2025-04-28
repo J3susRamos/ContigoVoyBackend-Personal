@@ -29,6 +29,7 @@ class Paciente extends Model
         'estadoCivil',
         'genero',
         'DNI',
+        'imagen',
         'celular',
         'direccion',
         'idPsicologo'
@@ -56,15 +57,12 @@ class Paciente extends Model
 
     public static function generatePacienteCode()
     {
-        $lastPaciente = self::latest('idPaciente')->first();
-
-        if ($lastPaciente && preg_match('/PA(\d+)/', $lastPaciente->codigo, $matches)) {
-            $newNumber = intval($matches[1]) + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        return 'PA' . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+        $lastCode = self::selectRaw("MAX(CAST(SUBSTRING(codigo, 4) AS UNSIGNED)) as max_code")
+            ->value('max_code');
+    
+        $newNumber = $lastCode ? $lastCode + 1 : 1;
+    
+        return 'PAC' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
     
 }

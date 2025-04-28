@@ -45,14 +45,14 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
 });
 
 Route::controller(PsicologosController::class)->prefix('psicologos')->group(function () {
-    Route::get('/', 'showAllPsicologos');
-    Route::get('/{id}', 'showById');
-
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+        Route::get('/dashboard', 'psicologoDashboard');
         Route::post('/', 'createPsicologo');
         Route::put('/{id}', 'updatePsicologo');
         Route::delete('/{id}', 'DeletePsicologo');
     });
+    Route::get('/', 'showAllPsicologos');
+    Route::get('/{id}', 'showById');
 });
 
 Route::controller(BlogController::class)->prefix('blogs')->group(function () {
@@ -146,8 +146,4 @@ Route::controller(PrePacienteController::class)->prefix('pre-pacientes')->group(
     });
 });
 
-Route::controller(DashboardController::class)->prefix('dashboard')
-    ->middleware(['auth:sanctum', 'role:PSICOLOGO'])
-    ->group(function () {
-        Route::get('/psicologo', 'psicologoDashboard');
-    });
+
