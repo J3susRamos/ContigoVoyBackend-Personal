@@ -7,6 +7,7 @@ use App\Models\Cita;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Http\Request;
 use App\Http\Requests\PostCita\PostCita;
+use App\Models\Paciente;
 use App\Models\Psicologo;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -225,25 +226,30 @@ class CitaController extends Controller
         ->whereIn('estado_Cita', ['completada', 'pendiente'])  
         ->sum('duracion'); 
         
-        // Total de pacientes únicos
-        $totalPacientes = Cita::where('idPsicologo', $idPsicologo)
-        ->whereNotNull('idPaciente')
-        ->distinct('idPaciente')
-        ->count('idPaciente');
+        $pacientesIds = Cita::where('idPsicologo', $idPsicologo)
+        ->whereIn('estado_Cita', ['completada', 'pendiente'])
+        ->pluck('idPaciente')
+        ->unique();
 
-        // Nuevos pacientes en los últimos 30 días (por su primera cita)
-        $nuevosPacientes = Cita::select('idPaciente')
-        ->where('idPsicologo', $idPsicologo)
+        // Total de pacientes únicos
+        $totalPacientes = $pacientesIds->count();
+
+
+        $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
+        ->whereIn('estado_Cita', ['completada', 'pendiente'])
         ->whereNotNull('idPaciente')
-        ->selectRaw('MIN(fecha_Cita) as primera_cita, idPaciente')
-        ->groupBy('idPaciente')
-        ->havingRaw('primera_cita >= ?', [now()->subDays(30)])
+        ->orderBy('fecha_Cita', 'asc')
         ->get()
+        ->groupBy('idPaciente') 
+        ->filter(function ($citasPaciente) {
+            $primeraCita = $citasPaciente->first();
+            return optional($primeraCita)->fecha_Cita >= now()->subDays(7);
+        })
         ->count();
     
         return HttpResponseHelper::make()
             ->successfulResponse('Datos del dashboard cargados correctamente',[
-               'total_citas' => $totalCitas,
+            'total_citas' => $totalCitas,
             'citas_completadas' => $citasCompletadas,
             'citas_pendientes' => $citasPendientes,
             'citas_canceladas' => $citasCanceladas,
