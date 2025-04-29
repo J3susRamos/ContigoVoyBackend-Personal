@@ -141,9 +141,9 @@ Route::controller(PrePacienteController::class)->prefix('pre-pacientes')->group(
     });
 });
 
-Route::controller(DashboardController::class)->prefix('dashboard')
+/*Route::controller(DashboardController::class)->prefix('dashboard')
 ->middleware(['auth:sanctum', 'role:PSICOLOGO'])
     ->group(function () {
         Route::get('/psicologo', 'psicologoDashboard');
-    });
+    });*/
 
