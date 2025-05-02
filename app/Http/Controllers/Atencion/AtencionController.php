@@ -44,9 +44,7 @@ class AtencionController extends Controller
     {
         try {
             $atencion = Atencion::with('cita.paciente')
-                ->whereHas('cita', function ($query) use ($idPaciente) {
-                    $query->where('idPaciente', $idPaciente);
-                })
+                ->whereHas('cita', function ($query) use ($idPaciente) {$query->where('idPaciente', $idPaciente);})
                 ->orderByDesc('fechaAtencion')
                 ->first();
 
