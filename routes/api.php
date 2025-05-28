@@ -147,4 +147,6 @@ Route::controller(PrePacienteController::class)->prefix('pre-pacientes')->group(
     });
 });
 
-
+Route::controller(App\Http\Controllers\EstadisticasController::class)->prefix('estadisticas')->group(function () {
+    Route::get('/', 'index');
+});
