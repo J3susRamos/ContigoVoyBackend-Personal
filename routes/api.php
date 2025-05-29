@@ -16,7 +16,15 @@ use App\Http\Controllers\Prepaciente\PrePacienteController;
 use App\Http\Controllers\RespuestasBlog\RespuestaComentarioController;
 use App\Http\Controllers\RegistroFamiliar\RegistroFamiliarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Estadisticas\EstadisticasController;
 
+Route::controller(EstadisticasController::class)
+    ->prefix('estadisticas')
+    ->middleware(['auth:sanctum', 'role:PSICOLOGO'])
+    ->group(function () {
+        Route::get('/', 'statistics');
+        Route::get('/porcentaje-genero', 'porcentajePacientesPorGenero');
+    });
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
     Route::post('/login', 'login');
     Route::post('/logout', 'logout')->middleware('auth:sanctum');
@@ -147,6 +155,3 @@ Route::controller(PrePacienteController::class)->prefix('pre-pacientes')->group(
     });
 });
 
-Route::controller(App\Http\Controllers\EstadisticasController::class)->prefix('estadisticas')->group(function () {
-    Route::get('/', 'index');
-});
