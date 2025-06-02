@@ -11,19 +11,6 @@ use App\Traits\HttpResponseHelper;
 
 class EstadisticasController extends Controller
 {
-    public function statistics(): JsonResponse
-    {
-        // Datos de ejemplo, reemplaza por tus estadísticas reales
-        $data = [
-            'usuarios' => 120,
-            'pacientes' => 80,
-            'psicologos' => 10,
-            'citas' => 200,
-        ];
-
-        return response()->json($data);
-    }
-
     public function porcentajePacientesPorGenero()
     {
         try {
@@ -37,20 +24,20 @@ class EstadisticasController extends Controller
             }
 
             $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
-            $total = $pacientes->count();
 
-            $estadisticas = $pacientes
-                ->groupBy(function ($paciente) {
-                    return $paciente->genero ?: 'Desconocido';
-                })
-                ->map(function ($pacientes) use ($total) {
-                    $count = $pacientes->count();
-                    $porcentaje = $total > 0 ? round(($count / $total) * 100, 2) : 0;
-                    return [
-                        'cantidad' => $count,
-                        'porcentaje' => $porcentaje
-                    ];
-                });
+            $total = $pacientes->count();
+            if ($total === 0) {
+                return HttpResponseHelper::make()
+                    ->successfulResponse('No hay pacientes registrados.', [])
+                    ->send();
+            }
+
+            $estadisticas = $pacientes->groupBy('genero')->map(function ($items) use ($total) {
+                return [
+                    'cantidad' => $items->count(),
+                    'porcentaje' => round(($items->count() / $total) * 100)
+                ];
+            });
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Porcentaje de pacientes por género obtenido correctamente', $estadisticas)
