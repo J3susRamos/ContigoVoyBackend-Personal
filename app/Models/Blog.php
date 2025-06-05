@@ -1,7 +1,11 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Blog extends Model
 {
@@ -9,27 +13,27 @@ class Blog extends Model
 
     protected $table = 'blogs';
     protected $primaryKey = 'idBlog';
-    public $timestamps = false; 
+    public $timestamps = false;
 
     protected $fillable = [
-        'idCategoria', 
+        'idCategoria',
         'tema',
         'contenido',
         'imagen',
         'idPsicologo',
     ];
 
-    public function psicologo()
+    public function psicologo(): BelongsTo
     {
         return $this->belongsTo(Psicologo::class, 'idPsicologo', 'idPsicologo');
     }
 
-    public function categoria()
+    public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class, 'idCategoria');
     }
 
-    public function comentarios()
+    public function comentarios(): HasMany
     {
         return $this->hasMany(Comentario::class, 'idBlog');
     }

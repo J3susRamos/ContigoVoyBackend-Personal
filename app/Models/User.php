@@ -8,14 +8,15 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
     protected $primaryKey = 'user_id';
-    protected $keyType = 'int'; 
-    public $incrementing = true; 
- 
+    protected $keyType = 'int';
+    public $incrementing = true;
+
      protected $casts = [
         'fecha_nacimiento' => 'date',
      ];
@@ -29,15 +30,15 @@ class User extends Authenticatable
          'imagen',
          'rol'
      ];
- 
+
      public $timestamps = false;
 
-     public function psicologos()
+     public function psicologos(): HasOne
      {
          return $this->hasOne(Psicologo::class, 'user_id', 'user_id');
      }
 
-     public function getEdadAttribute()
+     public function getEdadAttribute(): int
      {
          return Carbon::parse($this->fecha_nacimiento)->age;
      }

@@ -4,15 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 class Cita extends Model
 {
     use HasFactory;
-    protected $table = 'citas'; 
-    protected $primaryKey = 'idCita'; 
-    public $timestamps = false; 
+    protected $table = 'citas';
+    protected $primaryKey = 'idCita';
+    public $timestamps = false;
 
     protected $attributes = [
-        'colores' => '#FFA500', 
+        'colores' => '#FFA500',
         'estado_Cita' => 'Pendiente',
         'idCanal' => '1',
         'idEtiqueta' =>  '3',
@@ -35,37 +38,37 @@ class Cita extends Model
         'hora_cita',
     ];
 
-    public function etiqueta()
+    public function etiqueta(): BelongsTo
     {
-        return $this->belongsTo(etiqueta::class, foreignKey: 'idEtiqueta'); 
+        return $this->belongsTo(etiqueta::class, foreignKey: 'idEtiqueta');
     }
 
-    public function tipoCita()
+    public function tipoCita(): BelongsTo
     {
-        return $this->belongsTo(tipoCita::class, foreignKey: 'idTipoCita'); 
+        return $this->belongsTo(tipoCita::class, foreignKey: 'idTipoCita');
     }
 
-    public function canal()
+    public function canal(): BelongsTo
     {
         return $this->belongsTo(canal::class, foreignKey: 'idCanal');
     }
 
-    public function prepaciente()
+    public function prepaciente(): BelongsTo
     {
         return $this->belongsTo(PrePaciente::class, foreignKey: 'idPrePaciente');
     }
 
-    public function paciente()
+    public function paciente(): BelongsTo
     {
         return $this->belongsTo(Paciente::class, foreignKey: 'idPaciente');
     }
 
-    public function atenciones()
+    public function atenciones(): HasMany
     {
         return $this->hasMany(Atencion::class, 'idCita');
     }
 
-    public function psicologo()
+    public function psicologo(): BelongsTo
     {
         return $this->belongsTo(psicologo::class, 'idPsicologo');
     }
