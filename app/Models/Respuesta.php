@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Respuesta extends Model
 {
     use HasFactory;
     protected $primaryKey = 'idRespuesta';
-    public $timestamps = false; 
+    public $timestamps = false;
 
     protected $fillable = [
         'nombre',
@@ -17,10 +18,8 @@ class Respuesta extends Model
         'idComentario',
     ];
 
-    public function comentarios()
+    public function comentarios(): BelongsTo
     {
         return $this->belongsTo(Comentario::class, 'idComentario');
     }
-
-    
 }

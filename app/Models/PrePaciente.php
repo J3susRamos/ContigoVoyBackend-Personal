@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PrePaciente extends Model
 {
@@ -14,7 +16,7 @@ class PrePaciente extends Model
     public $timestamps = true;
 
     protected $attributes = [
-        'estado' => 'pendiente', 
+        'estado' => 'pendiente',
     ];
 
     protected $fillable = [
@@ -24,12 +26,12 @@ class PrePaciente extends Model
         'idPsicologo',
     ];
 
-    public function citas()
+    public function citas(): HasMany
     {
         return $this->hasMany(Cita::class, 'idPrePaciente');
     }
 
-    public function psicologo()
+    public function psicologo(): BelongsTo
     {
         return $this->belongsTo(Psicologo::class, 'idPsicologo', 'idPsicologo');
     }

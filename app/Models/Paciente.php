@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 class Paciente extends Model
@@ -13,7 +16,7 @@ class Paciente extends Model
     public $incrementing = true;
     protected $keyType = 'int';
     protected $table = 'pacientes';
-    public $timestamps = false; 
+    public $timestamps = false;
 
     protected $casts = [
         'fecha_nacimiento' => 'date',
@@ -35,34 +38,33 @@ class Paciente extends Model
         'idPsicologo'
     ];
 
-    public function citas()
+    public function citas(): HasMany
     {
         return $this->hasMany(Cita::class, 'idPaciente');
     }
-    
-    public function psicologo()
+
+    public function psicologo(): BelongsTo
     {
         return $this->belongsTo(Psicologo::class, 'idPsicologo');
     }
 
-    public function registroFamiliar()
+    public function registroFamiliar(): HasOne
     {
         return $this->hasOne(RegistroFamiliar::class, 'idPaciente');
     }
 
-    public function getEdadAttribute()
+    public function getEdadAttribute(): int
     {
         return Carbon::parse($this->fecha_nacimiento)->age;
     }
 
-    public static function generatePacienteCode()
+    public static function generatePacienteCode(): string
     {
         $lastCode = self::selectRaw("MAX(CAST(SUBSTRING(codigo, 4) AS UNSIGNED)) as max_code")
             ->value('max_code');
-    
+
         $newNumber = $lastCode ? $lastCode + 1 : 1;
-    
+
         return 'PAC' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
     }
-    
 }

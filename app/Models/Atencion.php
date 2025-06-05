@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Atencion extends Model
 {
-    protected $table = 'atenciones'; 
-    protected $primaryKey = 'idAtencion'; 
+    protected $table = 'atenciones';
+    protected $primaryKey = 'idAtencion';
     public $timestamps = false;
 
     protected $fillable = [
@@ -26,13 +25,13 @@ class Atencion extends Model
         'fechaAtencion',
         'descripcion',
     ];
-    
-    public function enfermedad()
+
+    public function enfermedad(): BelongsTo
     {
         return $this->belongsTo(Enfermedad::class, 'idEnfermedad');
     }
 
-    public function cita()
+    public function cita(): BelongsTo
     {
         return $this->belongsTo(Cita::class, 'idCita');
     }

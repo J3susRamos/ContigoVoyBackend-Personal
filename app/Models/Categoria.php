@@ -9,10 +9,10 @@ class Categoria extends Model
     use HasFactory;
     public $timestamps = false;
     protected $primaryKey = 'idCategoria';
-    protected $table = 'categorias'; 
+    protected $table = 'categorias';
     protected $fillable = ['nombre'];
 
-    public function blogs()
+    public function blogs(): HasMany
     {
         return $this->hasMany(Blog::class, 'idCategoria');
     }
