@@ -3,8 +3,8 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -13,8 +13,7 @@ class ContactoMailable extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $datos;
-
+    public array $datos;
 
     /**
      * Create a new message instance.
@@ -41,14 +40,14 @@ class ContactoMailable extends Mailable
     {
         return new Content(
             view: 'emails.contacto',
-            with: ['datos' => $this->datos] // Pasamos los datos a la vista
+            with: ['datos' => $this->datos]
         );
     }
 
     /**
      * Get the attachments for the message.
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @return array<int, Attachment>
      */
     public function attachments(): array
     {
