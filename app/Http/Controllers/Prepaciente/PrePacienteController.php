@@ -84,7 +84,7 @@ class PrePacienteController extends Controller
     /**
      * Obtener todos los pre pacientes.
      */
-    public function showAllPrePacientes(): View
+    public function showAllPrePacientes(): View|JsonResponse
     {
         try {
             $prePacientes = PrePaciente::all();
