@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Atencion;
 
 use App\Http\Controllers\Controller;
 use App\Models\Atencion;
-use Illuminate\Http\Request;
 use App\Http\Requests\PostAtencion\PostAtencion;
 use App\Http\Requests\PutAtencion\PutAtencion;
 use App\Models\Cita;
 use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\JsonResponse;
 Carbon::setLocale('es');
 
 class AtencionController extends Controller
@@ -18,18 +18,18 @@ class AtencionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function createAtencion(PostAtencion $request, int $idCita)
+    public function createAtencion(PostAtencion $request, int $idCita): JsonResponse
     {
         try {
             $data = $request->validated();
             $data['idCita'] = $idCita;
-    
+
             // Crear la atención
             $atencion = Atencion::create($data);
-    
+
             // Actualizar el estado de la cita a "Confirmado"
             Cita::where('idCita', $idCita)->update(['estado_Cita' => 'Confirmada']);
-    
+
             return HttpResponseHelper::make()
                 ->successfulResponse('Atención creada y cita confirmada correctamente')
                 ->send();
@@ -40,7 +40,7 @@ class AtencionController extends Controller
         }
     }
 
-    public function showAtencionByPaciente($idPaciente)
+    public function showAtencionByPaciente($idPaciente): JsonResponse
     {
         try {
             $atencion = Atencion::with('cita.paciente')
@@ -84,10 +84,10 @@ class AtencionController extends Controller
         }
     }
 
-        /**
-     * Obtener todas las atenciones 
+    /**
+     * Obtener todas las atenciones
      */
-    public function showAllAtenciones()
+    public function showAllAtenciones(): JsonResponse
     {
         try {
             $atenciones = Atencion::with(['cita.paciente', 'cita.prepaciente'])
@@ -130,7 +130,7 @@ class AtencionController extends Controller
     /**
      * Obtener una atención por su ID.
      */
-    public function showAllAtencionesPaciente(int $id)
+    public function showAllAtencionesPaciente(int $id): JsonResponse
     {
         try {
             $atenciones = Atencion::with(['cita.paciente', 'cita.prepaciente']) // Cargamos ambas relaciones
@@ -140,7 +140,7 @@ class AtencionController extends Controller
                 ->get()
                 ->map(function ($atencion) {
                     $cita = $atencion->cita;
-    
+
                     // Si existe paciente, lo usamos. Si no, buscamos el prepaciente.
                     if ($cita->paciente) {
                         $nombre = $cita->paciente->nombre . ' ' . $cita->paciente->apellido;
@@ -149,7 +149,7 @@ class AtencionController extends Controller
                     } else {
                         $nombre = 'Nombre no disponible';
                     }
-    
+
                     return [
                         'hora_inicio' => $cita->hora_cita,
                         'nombre_completo' => $nombre,
@@ -159,11 +159,11 @@ class AtencionController extends Controller
                         'idAtencion' => $atencion->idAtencion
                     ];
                 });
-    
+
             return HttpResponseHelper::make()
                 ->successfulResponse('Atenciones resumidas del paciente obtenidas correctamente', [$atenciones])
                 ->send();
-    
+
         } catch (Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al obtener las atenciones resumidas: ' . $e->getMessage())
@@ -174,7 +174,7 @@ class AtencionController extends Controller
     /**
      * Actualizar una atención existente.
      */
-    public function updateAtencion(PutAtencion $request, int $id)
+    public function updateAtencion(PutAtencion $request, int $id): JsonResponse
     {
         try {
             $atencion = Atencion::findOrFail($id);
@@ -196,7 +196,7 @@ class AtencionController extends Controller
     /**
      * Eliminar una atención.
      */
-    public function destroyAtencion(int $id)
+    public function destroyAtencion(int $id): JsonResponse
     {
         try {
             $atencion = Atencion::findOrFail($id);

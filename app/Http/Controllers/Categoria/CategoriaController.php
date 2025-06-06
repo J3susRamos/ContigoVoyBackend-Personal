@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PostCategoria\PostCategoria;
 use App\Models\Categoria;
 use App\Traits\HttpResponseHelper;
-
+use Illuminate\Http\JsonResponse;
 
 class CategoriaController extends Controller
 {
-    //
-    public function createCategoria(PostCategoria $request)
+    public function createCategoria(PostCategoria $request): JsonResponse
     {
         try {
             $exists = Categoria::where('nombre', $request->nombre)->exists();
@@ -37,7 +36,7 @@ class CategoriaController extends Controller
         }
     }
 
-    public function showAll()
+    public function showAll(): JsonResponse
     {
         try {
             $categorias = Categoria::all();
@@ -51,7 +50,7 @@ class CategoriaController extends Controller
         }
     }
 
-    public function destroyCategoria( int $id)
+    public function destroyCategoria(int $id): JsonResponse
     {
         try {
             $categoria = Categoria::findOrFail($id);

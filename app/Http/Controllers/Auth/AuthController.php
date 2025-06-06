@@ -9,22 +9,23 @@ use App\Http\Requests\PostAuth\PostAuth;
 use App\Models\Psicologo;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
 
 class AuthController extends Controller
 {
-    public function login(PostAuth $request)
+    public function login(PostAuth $request): JsonResponse
     {
         try {
             $user = User::where('email', $request->email)->first();
             if (!$user) {
                 return HttpResponseHelper::make()
                     ->unauthorizedResponse('El correo electrónico no está registrado.');
-               
+
             }
             if (!Hash::check($request->password, $user->password)) {
                 return HttpResponseHelper::make()
                     ->unauthorizedResponse('La contraseña es incorrecta.');
-                   
+
             }
             $token = $user->createToken('token')->plainTextToken;
             $responseData = [
@@ -32,21 +33,21 @@ class AuthController extends Controller
                 'nombre' => $user->name,
                 'apellido' => $user->apellido,
                 'email' => $user->email,
-                'id' => $user->user_id, 
+                'id' => $user->user_id,
                 'rol' => $user->rol,
                 'imagen'=>$user->imagen
             ];
-            
+
             if ($user->rol === 'PSICOLOGO') {
                 $psicologo = Psicologo::where('user_id', $user->user_id)->first();
-            
+
                 if ($psicologo) {
                     $responseData['idpsicologo'] = $psicologo->idPsicologo; // Opcional: mantenerlo también en otro campo si quieres
                 } else {
                     Log::warning("Usuario con rol PSICOLOGO no tiene registro en tabla psicologos. User ID: " . $user->id);
                 }
             }
-            
+
             return HttpResponseHelper::make()
                 ->successfulResponse('Inicio de sesión exitoso.', $responseData)
                 ->send();
@@ -61,7 +62,7 @@ class AuthController extends Controller
         }
     }
 
-    public function logout(PostAuth $request)
+    public function logout(PostAuth $request): JsonResponse
     {
         try {
             $user = $request->user();

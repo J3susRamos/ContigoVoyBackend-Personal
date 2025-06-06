@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Pacientes;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PostPaciente\PostPaciente;
 use App\Http\Requests\PostUser\PostUser;
@@ -13,10 +12,11 @@ use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Container\Attributes\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
 
 class PacienteController extends Controller
 {
-    public function createPaciente(PostPaciente $requestPaciente)
+    public function createPaciente(PostPaciente $requestPaciente): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -47,7 +47,7 @@ class PacienteController extends Controller
     }
 
     // Conteo de citas por paciente
-    public function getCitasPaciente(int $idPaciente)
+    public function getCitasPaciente(int $idPaciente): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -98,7 +98,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function updatePaciente(PostPaciente $requestPaciente, int $id)
+    public function updatePaciente(PostPaciente $requestPaciente, int $id): JsonResponse
     {
         try {
             $paciente = Paciente::findOrFail($id);
@@ -116,7 +116,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function showPacientesByPsicologo()
+    public function showPacientesByPsicologo(): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -151,7 +151,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function showPacienteById($id)
+    public function showPacienteById($id): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -177,7 +177,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function destroyPaciente(int $id)
+    public function destroyPaciente(int $id): JsonResponse
     {
         try {
             $paciente = Paciente::findOrFail($id);
@@ -193,7 +193,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesGenero()
+    public function getPacientesGenero(): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -225,7 +225,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesEdad()
+    public function getPacientesEdad(): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -270,7 +270,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesLugar()
+    public function getPacientesLugar(): JsonResponse
     {
         try {
             $userId = Auth::id();

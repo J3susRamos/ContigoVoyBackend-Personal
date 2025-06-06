@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Mail;
 use Exception;
 use App\Models\User;
 
-
 class PrePacienteController extends Controller
 {
     public function createPrePaciente(Request $request)
@@ -57,7 +56,7 @@ class PrePacienteController extends Controller
             ];
 
             $adminEmail = config('emails.admin_address', 'contigovoyproject@gmail.com');
-            
+
             Mail::to($adminEmail)->send(new PrePacienteCreado($datos));
 
             Mail::to($prePaciente->correo)->send(new \App\Mail\ConfirmacionPrePaciente([
@@ -92,7 +91,7 @@ class PrePacienteController extends Controller
             return view('pre_pacientes', ['prePacientes' => $prePacientes]);
 
             return HttpResponseHelper::make()
-                ->successfulResponse('PrePacientes obtenidos correctamente', [$prePacientes]) 
+                ->successfulResponse('PrePacientes obtenidos correctamente', [$prePacientes])
                 ->send();
         } catch (Exception $e) {
             return HttpResponseHelper::make()

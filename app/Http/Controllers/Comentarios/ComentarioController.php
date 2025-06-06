@@ -7,10 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PostComentario\PostComentario;
 use App\Models\Comentario;
 use App\Traits\HttpResponseHelper;
+use Illuminate\Http\JsonResponse;
 
 class ComentarioController extends Controller
 {
-    public function createComentario(PostComentario $request, int $id)
+    public function createComentario(PostComentario $request, int $id): JsonResponse
     {
         try {
             $data = $request->all();
@@ -28,7 +29,7 @@ class ComentarioController extends Controller
         }
     }
 
-    public function showComentariosByBlog(int $id)
+    public function showComentariosByBlog(int $id): JsonResponse
     {
         try {
             $comentarios = Comentario::where('idBlog', $id)->get();
@@ -44,12 +45,12 @@ class ComentarioController extends Controller
         }
     }
 
-    public function destroyComentario(int $id)
+    public function destroyComentario(int $id): JsonResponse
     {
         try {
             $comentario = Comentario::where('idComentario', $id)->firstOrFail();
             $comentario->delete();
-    
+
             return HttpResponseHelper::make()
                 ->successfulResponse('Comentario eliminado correctamente')
                 ->send();

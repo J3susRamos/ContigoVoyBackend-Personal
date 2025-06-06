@@ -9,10 +9,11 @@ use App\Http\Requests\PostBlogs\PostBlogs;
 use App\Models\Psicologo;
 use Illuminate\Support\Str;
 use App\Traits\HttpResponseHelper;
+use Illuminate\Http\JsonResponse;
 
 class BlogController extends Controller
 {
-    public function createBlog(PostBlogs $request)
+    public function createBlog(PostBlogs $request): JsonResponse
     {
         try {
             $userId = Auth::id();
@@ -39,7 +40,7 @@ class BlogController extends Controller
         }
     }
 
-    public function showAllBlogs()
+    public function showAllBlogs(): JsonResponse
     {
         try {
             $blogs = Blog::with('categoria', 'psicologo.users')->get()->map(function ($blog) {
@@ -65,8 +66,7 @@ class BlogController extends Controller
         }
     }
 
-
-    public function BlogAllPreviews()
+    public function BlogAllPreviews(): JsonResponse
     {
         try {
             $blogs = Blog::with([
@@ -97,7 +97,7 @@ class BlogController extends Controller
         }
     }
 
-    public function showbyIdBlog($id)
+    public function showbyIdBlog($id): JsonResponse
     {
         try {
             $blog = Blog::with(['categoria', 'psicologo.users'])->find($id); // Eliminamos el `get()`
@@ -130,7 +130,7 @@ class BlogController extends Controller
         }
     }
 
-    public function showAllAuthors()
+    public function showAllAuthors(): JsonResponse
     {
         try {
             $authors = Blog::with('psicologo.users')
@@ -147,7 +147,6 @@ class BlogController extends Controller
                 ->unique('name')
                 ->values();
 
-
             return HttpResponseHelper::make()
                 ->successfulResponse('Autores Publicados blogs', $authors)
                 ->send();
@@ -156,7 +155,7 @@ class BlogController extends Controller
         }
     }
 
-    public function updateBlog(PostBlogs $request, int $id)
+    public function updateBlog(PostBlogs $request, int $id): JsonResponse
     {
         try {
             $blog = Blog::findOrFail($id);
@@ -172,7 +171,7 @@ class BlogController extends Controller
         }
     }
 
-    public function destroyBlog(int $id)
+    public function destroyBlog(int $id): JsonResponse
     {
         try {
             $blog = Blog::findOrFail($id);
