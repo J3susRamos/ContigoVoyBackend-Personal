@@ -9,14 +9,15 @@ use App\Models\Respuesta;
 use App\Traits\HttpResponseHelper;
 use App\Http\Requests\PostRespuestaComentario\PostRespuestaComentario;
 use Exception;
+use Illuminate\Http\JsonResponse;
 
 class RespuestaComentarioController extends Controller
 {
-    public function createRespuesta(PostRespuestaComentario $request)
+    public function createRespuesta(PostRespuestaComentario $request): JsonResponse
     {
         try {
             $data = $request->validated();
-            
+
             Respuesta::create($data);
 
             return HttpResponseHelper::make()
@@ -30,7 +31,7 @@ class RespuestaComentarioController extends Controller
         }
     }
 
-    public function showRespuestasByComentario(int $idComentario)
+    public function showRespuestasByComentario(int $idComentario): JsonResponse
     {
         try {
             $respuestas = Respuesta::where('idComentario', $idComentario)->get();
@@ -46,7 +47,7 @@ class RespuestaComentarioController extends Controller
         }
     }
 
-    public function destroyRespuesta(int $id)
+    public function destroyRespuesta(int $id): JsonResponse
     {
         try {
             $respuesta = Respuesta::where('idRespuesta', $id)->firstOrFail();

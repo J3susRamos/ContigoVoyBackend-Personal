@@ -16,7 +16,6 @@ class PostUser extends FormRequest
         return true;
     }
 
-
     public function prepareForValidation()
     {
         if ($psicologo = Psicologo::find($this->route('id'))) {

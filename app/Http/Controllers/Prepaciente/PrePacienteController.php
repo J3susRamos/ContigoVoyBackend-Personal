@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PostCita\PostCita;
 use Illuminate\Http\Request;
 use App\Models\PrePaciente;
-use App\Http\Requests\PrePacienteRequest;
 use App\Mail\PrePacienteCreado;
 use App\Models\Cita;
 use App\Traits\HttpResponseHelper;
