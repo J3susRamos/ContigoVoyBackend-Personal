@@ -13,10 +13,12 @@ use App\Traits\HttpResponseHelper;
 use Illuminate\Support\Facades\Mail;
 use Exception;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 
 class PrePacienteController extends Controller
 {
-    public function createPrePaciente(Request $request)
+    public function createPrePaciente(Request $request): JsonResponse
     {
         try {
 
@@ -83,16 +85,13 @@ class PrePacienteController extends Controller
     /**
      * Obtener todos los pre pacientes.
      */
-    public function showAllPrePacientes()
+    public function showAllPrePacientes(): View
     {
         try {
             $prePacientes = PrePaciente::all();
 
             return view('pre_pacientes', ['prePacientes' => $prePacientes]);
 
-            return HttpResponseHelper::make()
-                ->successfulResponse('PrePacientes obtenidos correctamente', [$prePacientes])
-                ->send();
         } catch (Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al obtener los pre pacientes: ' . $e->getMessage())
@@ -103,7 +102,7 @@ class PrePacienteController extends Controller
     /**
      * Obtener un pre paciente por su ID.
      */
-    public function showPrePaciente(int $id)
+    public function showPrePaciente(int $id): JsonResponse
     {
         try {
             $prePaciente = PrePaciente::findOrFail($id);
@@ -121,11 +120,11 @@ class PrePacienteController extends Controller
     /**
      * Actualizar un pre paciente existente.
      */
-    public function updatePrePaciente(Request $request, int $id)
+    public function updatePrePaciente(Request $request, int $id): JsonResponse
     {
         try {
             $prePaciente = PrePaciente::findOrFail($id);
-            $prePaciente->update($request->validated([
+            $prePaciente->update($request->validate([
                 'nombre' => 'required|string|max:150',
                 'celular' => 'required|string|min:9|max:9',
                 'correo' => 'required|email|unique:pre_pacientes,correo|max:150',
@@ -144,7 +143,7 @@ class PrePacienteController extends Controller
     /**
      * Eliminar un pre paciente.
      */
-    public function destroyPrePaciente(int $id)
+    public function destroyPrePaciente(int $id): JsonResponse
     {
         try {
             $prePaciente = PrePaciente::findOrFail($id);

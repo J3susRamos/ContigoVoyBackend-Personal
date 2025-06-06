@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PostRegistroFamiliar\PostRegistroFamiliar;
 use App\Models\RegistroFamiliar;
 use App\Traits\HttpResponseHelper;
+use Illuminate\Http\JsonResponse;
 
 class RegistroFamiliarController extends Controller
 {
-    public function createRegistro(PostRegistroFamiliar $request, int $id)
+    public function createRegistro(PostRegistroFamiliar $request, int $id): JsonResponse
     {
         try {
             $registroFamiliarData = $request->validated();
@@ -26,7 +27,7 @@ class RegistroFamiliarController extends Controller
         }
     }
 
-    public function showRegistro(int $id)
+    public function showRegistro(int $id): JsonResponse
     {
         try {
             $registroFamiliar = RegistroFamiliar::where('idPaciente', $id)->first();
@@ -47,7 +48,7 @@ class RegistroFamiliarController extends Controller
         }
     }
 
-    public function updateRegistro(PostRegistroFamiliar $request, int $id)
+    public function updateRegistro(PostRegistroFamiliar $request, int $id): JsonResponse
     {
         try {
             $registroFamiliar = RegistroFamiliar::where('idPaciente', $id)->first();
@@ -70,7 +71,7 @@ class RegistroFamiliarController extends Controller
         }
     }
 
-    public function destroyRegistro(int $id)
+    public function destroyRegistro(int $id): JsonResponse
     {
         try {
             $registroFamiliar = RegistroFamiliar::where('idPaciente', $id)->first();

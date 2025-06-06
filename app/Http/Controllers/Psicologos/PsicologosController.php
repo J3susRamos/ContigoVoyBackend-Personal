@@ -15,11 +15,12 @@ use Illuminate\Support\Facades\Hash;
 use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
 
 class PsicologosController extends Controller
 {
 
-    public function createPsicologo(PostPsicologo $requestPsicologo, PostUser $requestUser)
+    public function createPsicologo(PostPsicologo $requestPsicologo, PostUser $requestUser): JsonResponse
     {
         try {
             $usuarioData = $requestUser->all();
@@ -51,7 +52,7 @@ class PsicologosController extends Controller
         }
     }
 
-    public function showById(int $id)
+    public function showById(int $id): JsonResponse
     {
         try {
             $psicologo = Psicologo::with(['especialidades', 'users'])->find($id);
@@ -89,7 +90,7 @@ class PsicologosController extends Controller
         }
     }
 
-    public function showAllPsicologos()
+    public function showAllPsicologos(): JsonResponse
     {
         try {
             $psicologos = Psicologo::with(['especialidades', 'users'])
@@ -124,7 +125,7 @@ class PsicologosController extends Controller
         }
     }
 
-    public function updatePsicologo(PutPsicologo $requestPsicologo, PutUser $requestUser, int $id)
+    public function updatePsicologo(PutPsicologo $requestPsicologo, PutUser $requestUser, int $id): JsonResponse
     {
         try {
             $psicologo = Psicologo::findOrFail($id);
@@ -176,8 +177,7 @@ class PsicologosController extends Controller
         }
     }
 
-
-    public function cambiarEstadoPsicologo(int $id)
+    public function cambiarEstadoPsicologo(int $id): JsonResponse
     {
         try {
             $psicologo = Psicologo::find($id);
@@ -201,19 +201,19 @@ class PsicologosController extends Controller
         }
     }
 
-    public function psicologoDashboard()
+    public function psicologoDashboard(): JsonResponse
     {
         $userId = Auth::id();
         $psicologo = Psicologo::where('user_id', $userId)->first();
-    
+
         if (!$psicologo) {
             return HttpResponseHelper::make()
                 ->notFoundResponse('No se encontró un psicólogo asociado a este usuario.')
                 ->send();
         }
-    
+
         $idPsicologo = $psicologo->idPsicologo;
-    
+
         // Obtener citas del psicólogo
         $totalCitas = Cita::where('idPsicologo', $idPsicologo)->count();
         $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
@@ -221,9 +221,9 @@ class PsicologosController extends Controller
         $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
 
         $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
-        ->whereIn('estado_Cita', ['completada', 'pendiente'])  
-        ->sum('duracion'); 
-        
+        ->whereIn('estado_Cita', ['completada', 'pendiente'])
+        ->sum('duracion');
+
         // Total de pacientes únicos
         $totalPacientes = Cita::where('idPsicologo', $idPsicologo)
         ->whereNotNull('idPaciente')
@@ -239,7 +239,7 @@ class PsicologosController extends Controller
         ->havingRaw('primera_cita >= ?', [now()->subDays(30)])
         ->get()
         ->count();
-    
+
         return HttpResponseHelper::make()
             ->successfulResponse('Datos del dashboard cargados correctamente',[
                'total_citas' => $totalCitas,
@@ -248,12 +248,12 @@ class PsicologosController extends Controller
             'citas_canceladas' => $citasCanceladas,
             'total_minutos_reservados' => $totalMinutosReservados,
             'total_pacientes' => $totalPacientes,
-            'nuevos_pacientes' => $nuevosPacientes, 
+            'nuevos_pacientes' => $nuevosPacientes,
             ])
             ->send();
     }
 
-    public function DeletePsicologo(int $id)
+    public function DeletePsicologo(int $id): JsonResponse
     {
         try {
 

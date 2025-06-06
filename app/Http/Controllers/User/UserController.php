@@ -8,10 +8,11 @@ use App\Traits\HttpResponseHelper;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 
 class UserController extends Controller
 {
-    public function register(PostUser $request)
+    public function register(PostUser $request): JsonResponse
     {
         try {
             $userData = $request->all();
@@ -22,7 +23,7 @@ class UserController extends Controller
 
             $user = User::create($userData);
             $user->assignRole('ADMIN');
-    
+
             return HttpResponseHelper::make()
                 ->successfulResponse('Usuario creado correctamente')
                 ->send();

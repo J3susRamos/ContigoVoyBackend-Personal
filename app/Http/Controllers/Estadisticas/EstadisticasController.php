@@ -13,7 +13,7 @@ class EstadisticasController extends Controller
 {
     public function statistics(): JsonResponse
     {
-        // Datos de ejemplo, reemplaza por tus estadísticas reales
+        // Datos de ejemplo
         $data = [
             'usuarios' => 120,
             'pacientes' => 80,
@@ -24,7 +24,7 @@ class EstadisticasController extends Controller
         return response()->json($data);
     }
 
-    public function porcentajePacientesPorGenero()
+    public function porcentajePacientesPorGenero(): JsonResponse
     {
         try {
             $userId = Auth::id();
