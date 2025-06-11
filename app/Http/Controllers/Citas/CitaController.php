@@ -203,6 +203,8 @@ class CitaController extends Controller
         return response()->json($citas);
     }
 
+    //Nueva consulta de dashboard del psicólogo
+    
     public function psicologoDashboard()
     {
         $userId = Auth::id();
@@ -221,6 +223,8 @@ class CitaController extends Controller
         $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
         $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'pendiente')->count();
         $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
+            // citas añadidas a la consulta
+        $citasConfirmadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'confirmada')->count();
 
         $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
         ->whereIn('estado_Cita', ['completada', 'pendiente'])  
@@ -256,7 +260,9 @@ class CitaController extends Controller
             'total_minutos_reservados' => $totalMinutosReservados,
             'total_pacientes' => $totalPacientes,
             'nuevos_pacientes' => $nuevosPacientes, 
+            'citas_confirmadas' => $citasConfirmadas
             ])
             ->send();
     }
 }
+
