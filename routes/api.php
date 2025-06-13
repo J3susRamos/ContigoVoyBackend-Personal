@@ -19,7 +19,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Estadisticas\EstadisticasController;
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
-    Route::post('/login', 'login');
+    Route::post('/login', 'login')->name('login');
     Route::post('/logout', 'logout')->middleware('auth:sanctum');
 });
 
