@@ -46,7 +46,7 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
 });
 
 Route::controller(PsicologosController::class)->prefix('psicologos')->group(function () {
-    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::get('/dashboard', 'psicologoDashboard');
         Route::post('/', 'createPsicologo');
         Route::put('/{id}', 'updatePsicologo');
@@ -96,7 +96,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
-    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/', 'showAllCitasByPsicologo');
         Route::get('/dashboard/psicologo', 'psicologoDashboard');
         Route::post('/', 'createCita');
@@ -115,7 +115,7 @@ Route::controller(RespuestaComentarioController::class)->prefix('respuestas')->g
 });
 
 Route::controller(AtencionController::class)->prefix('atenciones')->group(function () {
-    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/ultima/paciente/{id}', 'showAtencionByPaciente');
         Route::get('/paciente/{id}', 'showAllAtencionesPaciente');
         Route::get('/', 'showAllAtenciones');
