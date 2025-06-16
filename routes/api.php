@@ -154,4 +154,3 @@ Route::controller(PrePacienteController::class)->prefix('pre-pacientes')->group(
         Route::delete('/{id}', 'destroyPrePaciente');
     });
 });
-

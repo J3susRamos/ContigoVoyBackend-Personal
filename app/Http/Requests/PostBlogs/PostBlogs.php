@@ -24,15 +24,12 @@ class PostBlogs extends FormRequest
         return [
             'tema'     => 'required|string|min:20|max:200',
             'contenido'     => 'required|string|min:200',
-            'imagen'        => 'required|string', 
+            'imagen'        => 'required|string',
             'idCategoria'   => 'required|exists:categorias,idCategoria',
         ];
     }
 
-
-
-    //mensajes oara validacion
-    
+    //mensajes para validacion
     public function messages(): array
     {
         return [
