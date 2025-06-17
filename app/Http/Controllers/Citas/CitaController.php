@@ -51,7 +51,7 @@ class CitaController extends Controller
             $id = $psicologo->idPsicologo;
             $citas = Cita::where('idPsicologo', $id)
                 ->with([
-                    'paciente:idPaciente,nombre,apellido,codigo',
+                    'paciente:idPaciente,nombre,apellido,codigo,genero',
                     'prepaciente:idPrePaciente,nombre'
                 ])
                 ->get()
@@ -64,6 +64,8 @@ class CitaController extends Controller
                             ? $cita->paciente->nombre . ' ' . $cita->paciente->apellido
                             : ($cita->prepaciente ? $cita->prepaciente->nombre : null),
                         'codigo' => optional($cita->paciente)->codigo,
+                        // Añadido el género del paciente
+                        'genero' => $cita->paciente->genero,
                         'motivo' => $cita->motivo_Consulta,
                         'estado' => $cita->estado_Cita,
                         'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
@@ -230,27 +232,22 @@ class CitaController extends Controller
         ->whereIn('estado_Cita', ['completada', 'pendiente'])  
         ->sum('duracion'); 
         
-        $pacientesIds = Cita::where('idPsicologo', $idPsicologo)
-        ->whereIn('estado_Cita', ['completada', 'pendiente'])
-        ->pluck('idPaciente')
-        ->unique();
-
-        // Total de pacientes únicos
-        $totalPacientes = $pacientesIds->count();
-
-
-        $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
-        ->whereIn('estado_Cita', ['completada', 'pendiente'])
+        //Cambio en total de pacientes
+        $totalPacientes = Paciente::where('idPsicologo', $idPsicologo)
         ->whereNotNull('idPaciente')
-        ->orderBy('fecha_Cita', 'asc')
-        ->get()
-        ->groupBy('idPaciente') 
-        ->filter(function ($citasPaciente) {
-            $primeraCita = $citasPaciente->first();
-            return optional($primeraCita)->fecha_Cita >= now()->subDays(7);
-        })
-        ->count();
+        ->distinct('idPaciente')
+        ->count('idPaciente');
+
+  
     
+        //Cambio en nuevos pacientes
+         $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
+        ->where('estado_Cita', 'confirmada')
+        ->whereNotNull('idPaciente')
+        ->where('fecha_Cita', '>=', now()->subDays(7))
+        ->orderBy('fecha_Cita', 'asc')
+        ->count();
+
         return HttpResponseHelper::make()
             ->successfulResponse('Datos del dashboard cargados correctamente',[
             'total_citas' => $totalCitas,
