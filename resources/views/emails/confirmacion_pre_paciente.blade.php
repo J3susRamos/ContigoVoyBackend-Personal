@@ -114,7 +114,7 @@
         <div class="content">
             <p>Hola <span class="highlight">{{ $datos['nombre'] ?? 'Paciente' }}</span>,</p>
 
-            <p>Gracias por separar tu cita en <strong>Contigo Voy</strong>. A continuación encontrarás los detalles:</p>
+            <p>Gracias por separar tu cita en <strong>Centro Psicológico Contigo Voy</strong>. A continuación encontrarás los detalles:</p>
 
             <div class="info-box">
                 <ul>
