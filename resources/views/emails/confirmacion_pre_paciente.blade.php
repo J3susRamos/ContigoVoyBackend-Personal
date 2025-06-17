@@ -125,7 +125,7 @@
             </div>
 
             <div class="cta">
-                <a href="https://contigo-voy.com/">Visitar nuestra plataforma</a>
+                <a href="https://centropsicologicocontigovoy.com/">Visitar nuestra plataforma</a>
             </div>
 
             <p>Nos comunicaremos contigo pronto para confirmar tu cita.</p>

@@ -11,11 +11,11 @@ use App\Models\Paciente;
 use App\Models\Psicologo;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\JsonResponse;
 
 class CitaController extends Controller
 {
-    public function createCita(PostCita $request): JsonResponse
+
+    public function createCita(PostCita $request)
     {
         try {
             $userId = Auth::id();
@@ -36,7 +36,7 @@ class CitaController extends Controller
         }
     }
 
-    public function showAllCitasByPsicologo(): JsonResponse
+    public function showAllCitasByPsicologo()
     {
         try {
             $userId = Auth::id();
@@ -81,7 +81,7 @@ class CitaController extends Controller
         }
     }
 
-    public function showCitaById(int $id): JsonResponse
+    public function showCitaById(int $id)
     {
         try {
             $cita = Cita::with([
@@ -127,7 +127,7 @@ class CitaController extends Controller
         }
     }
 
-    public function showCitasPendientes(int $id): JsonResponse
+    public function showCitasPendientes(int $id)
     {
         try {
             $citas = Cita::where('estado_Cita', 'Pendiente')
@@ -150,7 +150,7 @@ class CitaController extends Controller
         }
     }
 
-    public function updateCita(PostCita $request, int $id): JsonResponse
+    public function updateCita(PostCita $request, int $id)
     {
         try {
             $cita = Cita::findOrFail($id);
@@ -166,7 +166,7 @@ class CitaController extends Controller
         }
     }
 
-    public function destroyCita(int $id): JsonResponse
+    public function destroyCita(int $id)
     {
         try {
             $cita = Cita::findOrFail($id);
@@ -182,7 +182,7 @@ class CitaController extends Controller
         }
     }
 
-    public function getCitasPorEstado(): JsonResponse
+    public function getCitasPorEstado()
     {
         $estadisticas = [
             'confirmada' => Cita::where('estado_Cita', 'Confirmada')->count(),
@@ -193,7 +193,7 @@ class CitaController extends Controller
         return response()->json($estadisticas);
     }
 
-    public function getCitasPorPeriodo(): JsonResponse
+    public function getCitasPorPeriodo()
     {
         $citas = Cita::selectRaw('DATE(fecha_cita) as fecha, COUNT(*) as total')
             ->groupBy('fecha_cita')
@@ -203,7 +203,9 @@ class CitaController extends Controller
         return response()->json($citas);
     }
 
-    public function psicologoDashboard(): JsonResponse
+    //Nueva consulta de dashboard del psicólogo
+
+    public function psicologoDashboard()
     {
         $userId = Auth::id();
         $psicologo = Psicologo::where('user_id', $userId)->first();
@@ -221,6 +223,8 @@ class CitaController extends Controller
         $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
         $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'pendiente')->count();
         $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
+            // citas añadidas a la consulta
+        $citasConfirmadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'confirmada')->count();
 
         $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
         ->whereIn('estado_Cita', ['completada', 'pendiente'])
@@ -233,6 +237,7 @@ class CitaController extends Controller
 
         // Total de pacientes únicos
         $totalPacientes = $pacientesIds->count();
+
 
         $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
         ->whereIn('estado_Cita', ['completada', 'pendiente'])
@@ -255,7 +260,9 @@ class CitaController extends Controller
             'total_minutos_reservados' => $totalMinutosReservados,
             'total_pacientes' => $totalPacientes,
             'nuevos_pacientes' => $nuevosPacientes,
+            'citas_confirmadas' => $citasConfirmadas
             ])
             ->send();
     }
 }
+

@@ -206,17 +206,24 @@ class PacienteController extends Controller
             }
 
             // Obtener el conteo de pacientes por género
-            $estadisticas = Paciente::where('idPsicologo', $psicologo->idPsicologo)
-                ->get()
-                ->groupBy(function ($paciente) {
-                    return $paciente->genero ?: 'Desconocido';
-                })
-                ->map(function ($pacientes) {
-                    return $pacientes->count();
-                });
+            $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
+            $total = $pacientes->count();
+            if ($total === 0) {
+                return HttpResponseHelper::make()
+                    ->successfulResponse('No hay pacientes registrados.', [])
+                    ->send();
+            }
+            $estadisticas = $pacientes->groupBy(function ($paciente) {
+                return $paciente->genero ?: 'Desconocido'; // Agrupar por género, o 'Desconocido' si no se especifica
+            })->map(function ($items) use ($total) {
+                return [
+                    'cantidad' => $items->count(),
+                    'porcentaje' => round(($items->count() / $total) * 100)
+                ];
+            });
 
             return HttpResponseHelper::make()
-                ->successfulResponse('Estadísticas de pacientes por género obtenidas correctamente', $estadisticas)
+                ->successfulResponse('Porcentaje de pacientes por genero obtenido correctamente', $estadisticas)
                 ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
