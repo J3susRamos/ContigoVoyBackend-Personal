@@ -51,7 +51,7 @@ class CitaController extends Controller
             $id = $psicologo->idPsicologo;
             $citas = Cita::where('idPsicologo', $id)
                 ->with([
-                    'paciente:idPaciente,nombre,apellido,codigo,genero',
+                    'paciente:idPaciente,nombre,apellido,codigo,genero,fecha_nacimiento',
                     'prepaciente:idPrePaciente,nombre'
                 ])
                 ->get()
@@ -66,6 +66,8 @@ class CitaController extends Controller
                         'codigo' => optional($cita->paciente)->codigo,
                         // Añadido el género del paciente
                         'genero' => $cita->paciente->genero,
+                        // Añadido la fecha de nacimiento del paciente
+                        'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
                         'motivo' => $cita->motivo_Consulta,
                         'estado' => $cita->estado_Cita,
                         'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
