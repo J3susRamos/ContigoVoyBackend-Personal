@@ -239,9 +239,12 @@ class CitaController extends Controller
         ->whereNotNull('idPaciente')
         ->distinct('idPaciente')
         ->count('idPaciente');
+        //Cambio en total de pacientes
+        $totalPacientes = Paciente::where('idPsicologo', $idPsicologo)
+        ->whereNotNull('idPaciente')
+        ->distinct('idPaciente')
+        ->count('idPaciente');
 
-  
-    
         //Cambio en nuevos pacientes
          $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
         ->where('estado_Cita', 'confirmada')
