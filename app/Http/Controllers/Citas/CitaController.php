@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\PostCita\PostCita;
 use App\Models\Paciente;
 use App\Models\Psicologo;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 
@@ -51,7 +52,7 @@ class CitaController extends Controller
             $id = $psicologo->idPsicologo;
             $citas = Cita::where('idPsicologo', $id)
                 ->with([
-                    'paciente:idPaciente,nombre,apellido,codigo,genero',
+                    'paciente:idPaciente,nombre,apellido,codigo,genero,fecha_nacimiento',
                     'prepaciente:idPrePaciente,nombre'
                 ])
                 ->get()
@@ -68,6 +69,9 @@ class CitaController extends Controller
                         'genero' => $cita->paciente->genero,
                         'motivo' => $cita->motivo_Consulta,
                         'estado' => $cita->estado_Cita,
+                        'edad' => $cita->paciente && $cita->paciente->fecha_nacimiento
+                            ? Carbon::parse($cita->paciente->fecha_nacimiento)->age
+                            : null,
                         'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
                         'duracion' => "{$cita->duracion} min."
                     ];
@@ -183,7 +187,7 @@ class CitaController extends Controller
                 ->send();
         }
     }
-  
+
     public function getCitasPorEstado()
     {
         $estadisticas = [
@@ -206,60 +210,59 @@ class CitaController extends Controller
     }
 
     //Nueva consulta de dashboard del psicólogo
-    
+
     public function psicologoDashboard()
     {
         $userId = Auth::id();
         $psicologo = Psicologo::where('user_id', $userId)->first();
-    
+
         if (!$psicologo) {
             return HttpResponseHelper::make()
                 ->notFoundResponse('No se encontró un psicólogo asociado a este usuario.')
                 ->send();
         }
-    
+
         $idPsicologo = $psicologo->idPsicologo;
-    
+
         // Obtener citas del psicólogo
         $totalCitas = Cita::where('idPsicologo', $idPsicologo)->count();
         $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
         $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'pendiente')->count();
         $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
-            // citas añadidas a la consulta
+        // citas añadidas a la consulta
         $citasConfirmadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'confirmada')->count();
 
         $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
-        ->whereIn('estado_Cita', ['completada', 'pendiente'])  
-        ->sum('duracion'); 
-        
+            ->whereIn('estado_Cita', ['completada', 'pendiente'])
+            ->sum('duracion');
+
         //Cambio en total de pacientes
         $totalPacientes = Paciente::where('idPsicologo', $idPsicologo)
-        ->whereNotNull('idPaciente')
-        ->distinct('idPaciente')
-        ->count('idPaciente');
+            ->whereNotNull('idPaciente')
+            ->distinct('idPaciente')
+            ->count('idPaciente');
 
-  
-    
+
+
         //Cambio en nuevos pacientes
-         $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
-        ->where('estado_Cita', 'confirmada')
-        ->whereNotNull('idPaciente')
-        ->where('fecha_Cita', '>=', now()->subDays(7))
-        ->orderBy('fecha_Cita', 'asc')
-        ->count();
+        $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
+            ->where('estado_Cita', 'confirmada')
+            ->whereNotNull('idPaciente')
+            ->where('fecha_Cita', '>=', now()->subDays(7))
+            ->orderBy('fecha_Cita', 'asc')
+            ->count();
 
         return HttpResponseHelper::make()
-            ->successfulResponse('Datos del dashboard cargados correctamente',[
-            'total_citas' => $totalCitas,
-            'citas_completadas' => $citasCompletadas,
-            'citas_pendientes' => $citasPendientes,
-            'citas_canceladas' => $citasCanceladas,
-            'total_minutos_reservados' => $totalMinutosReservados,
-            'total_pacientes' => $totalPacientes,
-            'nuevos_pacientes' => $nuevosPacientes, 
-            'citas_confirmadas' => $citasConfirmadas
+            ->successfulResponse('Datos del dashboard cargados correctamente', [
+                'total_citas' => $totalCitas,
+                'citas_completadas' => $citasCompletadas,
+                'citas_pendientes' => $citasPendientes,
+                'citas_canceladas' => $citasCanceladas,
+                'total_minutos_reservados' => $totalMinutosReservados,
+                'total_pacientes' => $totalPacientes,
+                'nuevos_pacientes' => $nuevosPacientes,
+                'citas_confirmadas' => $citasConfirmadas
             ])
             ->send();
     }
 }
-
