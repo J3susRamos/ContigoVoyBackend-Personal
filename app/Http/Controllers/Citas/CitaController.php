@@ -66,9 +66,9 @@ class CitaController extends Controller
                             : ($cita->prepaciente ? $cita->prepaciente->nombre : null),
                         'codigo' => optional($cita->paciente)->codigo,
                         // Añadido el género del paciente
-                        'genero' => $cita->paciente->genero,
-                        // Añadido la fecha de nacimiento del paciente
-                        'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
+                        'genero' => optional($cita->paciente)->genero ?: null,
+                        // // Añadido la fecha de nacimiento del paciente
+                        'fecha_nacimiento' => optional($cita->paciente)->fecha_nacimiento,
                         'motivo' => $cita->motivo_Consulta,
                         'estado' => $cita->estado_Cita,
                         'edad' => $cita->paciente && $cita->paciente->fecha_nacimiento
