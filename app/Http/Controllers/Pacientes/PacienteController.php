@@ -128,9 +128,17 @@ class PacienteController extends Controller
                     ->send();
             }
 
-            $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
+            // $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
+            $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)
+                ->with(['citas' => function ($query) {
+                    $query->orderBy('fecha_cita', 'desc')
+                        ->orderBy('hora_cita', 'desc')
+                        ->limit(1);
+                }])
+                ->get();
 
             $response = $pacientes->map(function ($paciente) {
+                $ultimaCita = $paciente->citas->first();
                 return [
                     'idPaciente' => $paciente->idPaciente,
                     'codigo' => $paciente->codigo,
@@ -138,6 +146,10 @@ class PacienteController extends Controller
                     'nombre' => $paciente->nombre . ' ' . $paciente->apellido,
                     'email' => $paciente->email,
                     'celular' => $paciente->celular,
+                    'genero' => $paciente->genero,
+                    'fecha_nacimiento' => $paciente->fecha_nacimiento,
+                    'edad' => Carbon::parse($paciente->fecha_nacimiento)->age,
+                    'ultima_cita_fecha' => $ultimaCita ? $ultimaCita->fecha_cita . ' ' . $ultimaCita->hora_cita : null
                 ];
             });
 
