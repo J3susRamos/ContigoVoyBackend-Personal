@@ -99,6 +99,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
         Route::get('/dashboard/psicologo', 'psicologoDashboard');
+        Route::get('/', 'showAllCitasByPsicologo');
         Route::post('/', 'createCita');
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
