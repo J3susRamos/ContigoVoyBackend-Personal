@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Pacientes;
 
+use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PostPaciente\PostPaciente;
 use App\Http\Requests\PostUser\PostUser;
@@ -12,11 +13,10 @@ use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Container\Attributes\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\JsonResponse;
 
 class PacienteController extends Controller
 {
-    public function createPaciente(PostPaciente $requestPaciente): JsonResponse
+    public function createPaciente(PostPaciente $requestPaciente)
     {
         try {
             $userId = Auth::id();
@@ -47,7 +47,7 @@ class PacienteController extends Controller
     }
 
     // Conteo de citas por paciente
-    public function getCitasPaciente(int $idPaciente): JsonResponse
+    public function getCitasPaciente(int $idPaciente)
     {
         try {
             $userId = Auth::id();
@@ -98,7 +98,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function updatePaciente(PostPaciente $requestPaciente, int $id): JsonResponse
+    public function updatePaciente(PostPaciente $requestPaciente, int $id)
     {
         try {
             $paciente = Paciente::findOrFail($id);
@@ -116,7 +116,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function showPacientesByPsicologo(): JsonResponse
+    public function showPacientesByPsicologo(Request $request)
     {
         try {
             $userId = Auth::id();
@@ -124,38 +124,86 @@ class PacienteController extends Controller
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
-                    ->notFoundResponse('No se tiene acceso como psicologo')
+                    ->notFoundResponse('No se tiene acceso como psicólogo')
                     ->send();
             }
 
-            // $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
-            $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)
+            $shouldPaginate = $request->query('paginate', false);
+            $perPage = $request->query('per_page', 10);
+
+            $query = Paciente::where('idPsicologo', $psicologo->idPsicologo)
                 ->with(['citas' => function ($query) {
                     $query->orderBy('fecha_cita', 'desc')
                         ->orderBy('hora_cita', 'desc')
                         ->limit(1);
-                }])
-                ->get();
+                }]);
 
-            $response = $pacientes->map(function ($paciente) {
-                $ultimaCita = $paciente->citas->first();
-                return [
-                    'idPaciente' => $paciente->idPaciente,
-                    'codigo' => $paciente->codigo,
-                    'DNI' => $paciente->DNI,
-                    'nombre' => $paciente->nombre . ' ' . $paciente->apellido,
-                    'email' => $paciente->email,
-                    'celular' => $paciente->celular,
-                    'genero' => $paciente->genero,
-                    'fecha_nacimiento' => $paciente->fecha_nacimiento,
-                    'edad' => Carbon::parse($paciente->fecha_nacimiento)->age,
-                    'ultima_cita_fecha' => $ultimaCita ? $ultimaCita->fecha_cita . ' ' . $ultimaCita->hora_cita : null
-                ];
-            });
+            // Filtrar por género
+            if ($request->filled('genero')) {
+                $generos = explode(',', $request->query('genero'));
+                $query->whereIn('genero', $generos);
+            }
 
-            return HttpResponseHelper::make()
-                ->successfulResponse('Pacientes obtenidos correctamente', $response)
-                ->send();
+            // Filtrar por edad (espera "10 - 20,30 - 40")
+            if ($request->filled('edad')) {
+                $rangosEdad = explode(',', $request->query('edad'));
+                $query->where(function ($q) use ($rangosEdad) {
+                    foreach ($rangosEdad as $rango) {
+                        [$min, $max] = array_map('intval', explode(' - ', $rango));
+                        $q->orWhereBetween('fecha_nacimiento', [
+                            now()->subYears($max)->startOfDay(),
+                            now()->subYears($min)->endOfDay()
+                        ]);
+                    }
+                });
+            }
+
+            // Filtrar por fecha de la última cita
+            if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+                $fechaInicio = $request->query('fecha_inicio');
+                $fechaFin = $request->query('fecha_fin');
+
+                $query->whereHas('citas', function ($q) use ($fechaInicio, $fechaFin) {
+                    $q->whereBetween('fecha_cita', [$fechaInicio, $fechaFin]);
+                });
+            }
+
+            // Filtrar por nombre
+            if ($request->filled('nombre')) {
+                $nombre = $request->query('nombre');
+                $query->where(function ($q) use ($nombre) {
+                    $q->where('nombre', 'like', "%{$nombre}%")
+                        ->orWhere('apellido', 'like', "%{$nombre}%");
+                });
+            }
+
+            if ($shouldPaginate) {
+                $pacientesPaginator = $query->paginate($perPage);
+                $data = $pacientesPaginator->getCollection()->map(function ($paciente) {
+                    return $this->mapPaciente($paciente);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse('Pacientes obtenidos correctamente', [
+                        'data' => $data,
+                        'pagination' => [
+                            'current_page' => $pacientesPaginator->currentPage(),
+                            'last_page' => $pacientesPaginator->lastPage(),
+                            'per_page' => $pacientesPaginator->perPage(),
+                            'total' => $pacientesPaginator->total()
+                        ]
+                    ])
+                    ->send();
+            } else {
+                $pacientes = $query->get();
+                $data = $pacientes->map(function ($paciente) {
+                    return $this->mapPaciente($paciente);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse('Pacientes obtenidos correctamente', $data)
+                    ->send();
+            }
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Ocurrió un problema al procesar la solicitud. ' . $e->getMessage())
@@ -163,7 +211,24 @@ class PacienteController extends Controller
         }
     }
 
-    public function showPacienteById($id): JsonResponse
+    private function mapPaciente($paciente)
+    {
+        $ultimaCita = $paciente->citas->first();
+        return [
+            'idPaciente' => $paciente->idPaciente,
+            'codigo' => $paciente->codigo,
+            'DNI' => $paciente->DNI,
+            'nombre' => $paciente->nombre . ' ' . $paciente->apellido,
+            'email' => $paciente->email,
+            'celular' => $paciente->celular,
+            'genero' => $paciente->genero,
+            'fecha_nacimiento' => $paciente->fecha_nacimiento,
+            'edad' => Carbon::parse($paciente->fecha_nacimiento)->age,
+            'ultima_cita_fecha' => $ultimaCita ? $ultimaCita->fecha_cita . ' ' . $ultimaCita->hora_cita : null
+        ];
+    }
+
+    public function showPacienteById($id)
     {
         try {
             $userId = Auth::id();
@@ -189,7 +254,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function destroyPaciente(int $id): JsonResponse
+    public function destroyPaciente(int $id)
     {
         try {
             $paciente = Paciente::findOrFail($id);
@@ -205,7 +270,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesGenero(): JsonResponse
+    public function getPacientesGenero()
     {
         try {
             $userId = Auth::id();
@@ -244,7 +309,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesEdad(): JsonResponse
+    public function getPacientesEdad()
     {
         try {
             $userId = Auth::id();
@@ -289,7 +354,7 @@ class PacienteController extends Controller
         }
     }
 
-    public function getPacientesLugar(): JsonResponse
+    public function getPacientesLugar()
     {
         try {
             $userId = Auth::id();

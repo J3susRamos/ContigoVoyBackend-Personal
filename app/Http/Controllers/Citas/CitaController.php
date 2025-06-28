@@ -37,7 +37,7 @@ class CitaController extends Controller
         }
     }
 
-    public function showAllCitasByPsicologo()
+    public function showAllCitasByPsicologo(Request $request)
     {
         try {
             $userId = Auth::id();
@@ -49,44 +49,117 @@ class CitaController extends Controller
                     ->send();
             }
 
-            $id = $psicologo->idPsicologo;
-            $citas = Cita::where('idPsicologo', $id)
+            $shouldPaginate = $request->query('paginate', false);
+            $perPage = $request->query('per_page', 10);
+
+            $query = Cita::where('idPsicologo', $psicologo->idPsicologo)
                 ->with([
                     'paciente:idPaciente,nombre,apellido,codigo,genero,fecha_nacimiento',
                     'prepaciente:idPrePaciente,nombre'
                 ])
-                ->get()
-                ->map(function ($cita) {
-                    return [
-                        'idCita' => $cita->idCita,
-                        'idPaciente' => $cita->idPaciente,
-                        'idPsicologo' => $cita->idPsicologo,
-                        'paciente' => $cita->paciente
-                            ? $cita->paciente->nombre . ' ' . $cita->paciente->apellido
-                            : ($cita->prepaciente ? $cita->prepaciente->nombre : null),
-                        'codigo' => optional($cita->paciente)->codigo,
-                        // Añadido el género del paciente
-                        'genero' => optional($cita->paciente)->genero ?: null,
-                        // // Añadido la fecha de nacimiento del paciente
-                        'fecha_nacimiento' => optional($cita->paciente)->fecha_nacimiento,
-                        'motivo' => $cita->motivo_Consulta,
-                        'estado' => $cita->estado_Cita,
-                        'edad' => $cita->paciente && $cita->paciente->fecha_nacimiento
-                            ? Carbon::parse($cita->paciente->fecha_nacimiento)->age
-                            : null,
-                        'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
-                        'duracion' => "{$cita->duracion} min."
-                    ];
+                ->orderBy('fecha_cita', 'desc')
+                ->orderBy('hora_cita', 'desc');
+
+            // FILTROS
+            if ($request->filled('genero')) {
+                $generos = explode(',', $request->query('genero'));
+                $query->whereHas('paciente', function ($q) use ($generos) {
+                    $q->whereIn('genero', $generos);
+                });
+            }
+
+            if ($request->filled('estado')) {
+                $estados = explode(',', $request->query('estado'));
+                $query->whereIn('estado_Cita', $estados);
+            }
+
+            if ($request->filled('edad')) {
+                $rangos = explode(',', $request->query('edad'));
+                $query->whereHas('paciente', function ($q) use ($rangos) {
+                    $q->where(function ($subQuery) use ($rangos) {
+                        foreach ($rangos as $rango) {
+                            [$min, $max] = explode(' - ', $rango);
+                            $minDate = Carbon::now()->subYears($max)->startOfDay();
+                            $maxDate = Carbon::now()->subYears($min)->endOfDay();
+                            $subQuery->orWhereBetween('fecha_nacimiento', [$minDate, $maxDate]);
+                        }
+                    });
+                });
+            }
+
+            if ($request->filled('nombre')) {
+                $nombre = $request->query('nombre');
+
+                $query->where(function ($q) use ($nombre) {
+                    $q->whereHas('paciente', function ($subQ) use ($nombre) {
+                        $subQ->whereRaw("CONCAT(nombre, ' ', apellido) LIKE ?", ["%$nombre%"]);
+                    })->orWhereHas('prepaciente', function ($subQ) use ($nombre) {
+                        $subQ->where('nombre', 'like', "%$nombre%");
+                    });
+                });
+            }
+
+            if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+                $from = $request->query('fecha_inicio');
+                $to = $request->query('fecha_fin');
+                $query->whereBetween('fecha_cita', [$from, $to]);
+            }
+
+            // PAGINACIÓN
+            if ($shouldPaginate) {
+                $citasPaginator = $query->paginate($perPage);
+                $data = $citasPaginator->getCollection()->map(function ($cita) {
+                    return $this->mapCita($cita);
                 });
 
-            return HttpResponseHelper::make()
-                ->successfulResponse('Lista de citas obtenida correctamente', $citas)
-                ->send();
+                return HttpResponseHelper::make()
+                    ->successfulResponse('Citas paginadas obtenidas correctamente', [
+                        'data' => $data,
+                        'pagination' => [
+                            'current_page' => $citasPaginator->currentPage(),
+                            'last_page' => $citasPaginator->lastPage(),
+                            'per_page' => $citasPaginator->perPage(),
+                            'total' => $citasPaginator->total()
+                        ]
+                    ])
+                    ->send();
+            } else {
+                $citas = $query->get();
+                $data = $citas->map(function ($cita) {
+                    return $this->mapCita($cita);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse('Lista de citas obtenida correctamente', $data)
+                    ->send();
+            }
         } catch (Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al obtener las citas: ' . $e->getMessage())
                 ->send();
         }
+    }
+
+    private function mapCita($cita)
+    {
+        return [
+            'idCita' => $cita->idCita,
+            'idPaciente' => $cita->idPaciente,
+            'idPsicologo' => $cita->idPsicologo,
+            'paciente' => $cita->paciente
+                ? $cita->paciente->nombre . ' ' . $cita->paciente->apellido
+                : ($cita->prepaciente ? $cita->prepaciente->nombre : null),
+            'codigo' => optional($cita->paciente)->codigo,
+            'genero' => optional($cita->paciente)->genero ?: null,
+            'fecha_nacimiento' => optional($cita->paciente)->fecha_nacimiento,
+            'motivo' => $cita->motivo_Consulta,
+            'estado' => $cita->estado_Cita,
+            'edad' => $cita->paciente && $cita->paciente->fecha_nacimiento
+                ? Carbon::parse($cita->paciente->fecha_nacimiento)->age
+                : null,
+            'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
+            'duracion' => "{$cita->duracion} min."
+        ];
     }
 
     public function showCitaById(int $id)
