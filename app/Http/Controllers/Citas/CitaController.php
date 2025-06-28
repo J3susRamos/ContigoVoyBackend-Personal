@@ -284,6 +284,29 @@ class CitaController extends Controller
         return response()->json($citas);
     }
 
+    //Consulta para las citas del psicologo (total por fechas)
+    public function getCitasPorPeriodoPsicologo()
+{
+    $userId = Auth::id();
+    $psicologo = Psicologo::where('user_id', $userId)->first();
+
+    if (!$psicologo) {
+        return HttpResponseHelper::make()
+            ->notFoundResponse('No se encontró un psicólogo asociado a este usuario.')
+            ->send();
+    }
+
+    $idPsicologo = $psicologo->idPsicologo;
+    
+    $citas = Cita::selectRaw('DATE(fecha_cita) as fecha, COUNT(*) as total')
+        ->where('idPsicologo', $idPsicologo)
+        ->groupBy('fecha_cita')
+        ->orderBy('fecha_cita', 'asc')
+        ->get();
+
+    return response()->json($citas);
+}
+
     //Nueva consulta de dashboard del psicólogo
 
     public function psicologoDashboard()
