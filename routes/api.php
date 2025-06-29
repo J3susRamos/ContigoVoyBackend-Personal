@@ -15,6 +15,7 @@ use App\Http\Controllers\Pacientes\PacienteController;
 use App\Http\Controllers\Prepaciente\PrePacienteController;
 use App\Http\Controllers\RespuestasBlog\RespuestaComentarioController;
 use App\Http\Controllers\RegistroFamiliar\RegistroFamiliarController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Estadisticas\EstadisticasController;
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
@@ -98,6 +99,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
         Route::get('/dashboard/psicologo', 'psicologoDashboard');
+        Route::get('/lista', 'showAllCitasByPsicologo'); // Add this line
         Route::post('/', 'createCita');
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
@@ -147,10 +149,7 @@ Route::controller(PrePacienteController::class)->prefix('pre-pacientes')->group(
     });
 });
 
-Route::controller(EstadisticasController::class)
-    ->prefix('estadisticas')
-    ->middleware(['auth:sanctum', 'role:PSICOLOGO'])
-    ->group(function () {
-        Route::get('/', 'statistics');
-        Route::get('/porcentaje-genero', 'porcentajePacientesPorGenero');
-    });
+Route::controller(EstadisticasController::class)->prefix('estadisticas')->middleware(['auth:sanctum', 'role:PSICOLOGO'])->group(function () {
+    Route::get('/', 'statistics');
+    Route::get('/porcentaje-genero', 'porcentajePacientesPorGenero');
+});
