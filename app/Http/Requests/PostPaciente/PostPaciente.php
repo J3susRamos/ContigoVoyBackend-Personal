@@ -3,6 +3,7 @@
 namespace App\Http\Requests\PostPaciente;
 
 use App\Models\Paciente;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,18 +17,22 @@ class PostPaciente extends FormRequest
         return true;
     }
 
-
-    public function prepareForValidation()
+    public function prepareForValidation(): void
     {
-        if ($paciente = Paciente::find($this->route('id'))) {
-            $this->merge(['idPaciente' => $paciente->idPaciente]);
+        $routeId = $this->route('id');
+        if ($routeId) {
+            /** @var Paciente|null $paciente */
+            $paciente = Paciente::query()->find($routeId);
+            if ($paciente) {
+                $this->merge(['idPaciente' => $paciente->getAttribute('idPaciente')]);
+            }
         }
     }
 
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array|string>
      */
     public function rules(): array
     {
