@@ -16,11 +16,10 @@ class PostPaciente extends FormRequest
         return true;
     }
 
-
     public function prepareForValidation()
     {
-        if ($paciente = Paciente::find($this->route('id'))) {
-            $this->merge(['idPaciente' => $paciente->idPaciente]);
+        if ($paciente = Paciente::find($this->route("id"))) {
+            $this->merge(["idPaciente" => $paciente->idPaciente]);
         }
     }
 
@@ -32,21 +31,24 @@ class PostPaciente extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre' => 'required|string|max:100',
-            'apellido' => 'required|string|max:100',
-            'email' => [
-                'required',
-                'email',
-                'max:100',
-                Rule::unique('pacientes', 'email')->ignore($this->input('idPaciente'), 'idPaciente'),
+            "nombre" => "required|string|max:100",
+            "apellido" => "required|string|max:100",
+            "email" => [
+                "required",
+                "email",
+                "max:100",
+                Rule::unique("pacientes", "email")->ignore(
+                    $this->input("idPaciente"),
+                    "idPaciente"
+                ),
             ],
-            'fecha_nacimiento' => 'required',
-            'ocupacion' => 'required|string|max:100',
-            'estadoCivil' => 'required|string|max:100',
-            'genero' => 'required|string|max:20',
-            'DNI' => 'required|string',
-            'celular' => 'required|string|min:9|max:9',
-            'direccion' => 'required|string|max:250',
+            "fecha_nacimiento" => "required",
+            "ocupacion" => "required|string|max:100",
+            "estadoCivil" => "required|string|max:100",
+            "genero" => "required|string|max:20",
+            "DNI" => "required|string",
+            "celular" => "required|string|min:9|max:9",
+            "direccion" => "required|string|max:250",
         ];
     }
 }
