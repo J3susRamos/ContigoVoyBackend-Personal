@@ -49,6 +49,9 @@ class PostPaciente extends FormRequest
             "DNI" => "required|string",
             "celular" => "required|string|min:9|max:9",
             "direccion" => "required|string|max:250",
+            "pais" => "required|string|max:100",
+            "provincia" => "required|string|max:100",
+            "departamento" => "required|string|max:100",
         ];
     }
 }
