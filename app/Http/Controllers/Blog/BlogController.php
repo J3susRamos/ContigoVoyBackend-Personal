@@ -47,7 +47,8 @@ class BlogController extends Controller
                     'id' => $blog->idBlog,
                     'tema' => $blog->tema,
                     'contenido' => Str::limit($blog->contenido, 150),
-                    'imagen' => $blog->imagen,
+                    'imagenes' => $blog->imagenes, // Array de imágenes
+                    'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                     'nombrePsicologo' => $blog->psicologo->users->name . ' ' . $blog->psicologo->users->apellido,
                     'psicologoImagenId' => $blog->psicologo->users->imagen,
                     'categoria' =>  $blog->categoria->nombre,
@@ -79,7 +80,8 @@ class BlogController extends Controller
                 'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
                 'contenido' => $blog->contenido,
-                'imagen' => $blog->imagen,
+                'imagenes' => $blog->imagenes, // Array de imágenes
+                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
@@ -111,11 +113,13 @@ class BlogController extends Controller
                 'id' => $blog->idBlog,
                 'tema' => $blog->tema,
                 'contenido' => $blog->contenido,
-                'imagen' => $blog->imagen,
+                'imagenes' => $blog->imagenes, // Array de imágenes
+                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
-                 'idCategoria'=> $blog->categoria->idCategoria,
+                'idCategoria'=> $blog->categoria->idCategoria,
+                'idPsicologo' => $blog->idPsicologo, // Agregamos el ID del psicólogo
                 'categoria' =>  $blog->categoria->nombre,
                 'fecha' => $blog->fecha_publicado,
             ];
