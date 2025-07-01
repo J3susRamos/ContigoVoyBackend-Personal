@@ -61,7 +61,9 @@ Route::controller(BlogController::class)->prefix('blogs')->group(function () {
     Route::get('/{id}', 'showbyIdBlog');
     Route::get('/all', 'showAllBlogs');
     Route::get('/', 'BlogAllPreviews');
+
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+        Route::get('/psicologo/{idPsicologo}', 'showBlogsByPsicologo'); // Nueva ruta
         Route::post('/', 'createBlog');
         Route::put('/{id}', 'updateBlog');
         Route::delete('/{id}', 'destroyBlog');
@@ -97,8 +99,9 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
-        Route::get('/', 'showAllCitasByPsicologo');
+        Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
         Route::get('/dashboard/psicologo', 'psicologoDashboard');
+        Route::get('/', 'showAllCitasByPsicologo');
         Route::post('/', 'createCita');
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
