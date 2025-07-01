@@ -30,7 +30,6 @@ class PacienteSeeder extends Seeder
                 "direccion" => "Av. Siempre Viva 742",
                 "idPsicologo" => 1,
                 "pais" => "Perú",
-                "provincia" => "Lima",
                 "departamento" => "Lima",
             ],
             [
@@ -47,7 +46,6 @@ class PacienteSeeder extends Seeder
                 "direccion" => "Calle Falsa 123",
                 "idPsicologo" => 1,
                 "pais" => "Perú",
-                "provincia" => "Lima",
                 "departamento" => "Lima",
             ],
             [
@@ -64,7 +62,6 @@ class PacienteSeeder extends Seeder
                 "direccion" => "Av. Siempre Viva 742",
                 "idPsicologo" => 1,
                 "pais" => "Perú",
-                "provincia" => "Lima",
                 "departamento" => "Lima",
             ],
             [
@@ -81,7 +78,6 @@ class PacienteSeeder extends Seeder
                 "direccion" => "Calle Falsa 123",
                 "idPsicologo" => 1,
                 "pais" => "Perú",
-                "provincia" => "Lima",
                 "departamento" => "Lima",
             ],
         ];

@@ -37,7 +37,6 @@ class Paciente extends Model
         "direccion",
         "idPsicologo",
         "pais",
-        "provincia",
         "departamento",
     ];
 
