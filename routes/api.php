@@ -61,7 +61,9 @@ Route::controller(BlogController::class)->prefix('blogs')->group(function () {
     Route::get('/{id}', 'showbyIdBlog');
     Route::get('/all', 'showAllBlogs');
     Route::get('/', 'BlogAllPreviews');
+
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PSICOLOGO']], function () {
+        Route::get('/psicologo/{idPsicologo}', 'showBlogsByPsicologo'); // Nueva ruta
         Route::post('/', 'createBlog');
         Route::put('/{id}', 'updateBlog');
         Route::delete('/{id}', 'destroyBlog');
