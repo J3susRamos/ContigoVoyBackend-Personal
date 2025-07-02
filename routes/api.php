@@ -17,6 +17,8 @@ use App\Http\Controllers\RespuestasBlog\RespuestaComentarioController;
 use App\Http\Controllers\RegistroFamiliar\RegistroFamiliarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Estadisticas\EstadisticasController;
+use App\Http\Controllers\Marketing\MarketingController;
+
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
     Route::post('/login', 'login')->name('login');
@@ -155,3 +157,16 @@ Route::controller(EstadisticasController::class)
         Route::get('/', 'statistics');
         Route::get('/porcentaje-genero', 'porcentajePacientesPorGenero');
     });
+
+Route::controller(MarketingController::class)->prefix('marketing')->middleware(['auth:sanctum', 'role:PSICOLOGO'])->group(function () {
+    Route::post('/', 'crearPlantilla');                      
+    Route::get('/', 'listarPorPsicologo');
+    Route::get('/{id}', 'detallePlantilla');                  
+    Route::put('/{id}', 'actualizarPlantilla');             
+    Route::delete('/{id}', 'eliminarPlantilla'); 
+    Route::post('/enviar', 'enviarEmail');     
+    Route::get('/pacientes-emails', 'listarEmailsPacientes');
+       
+});
+    
+    
