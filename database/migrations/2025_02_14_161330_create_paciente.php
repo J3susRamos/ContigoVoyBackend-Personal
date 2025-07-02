@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('ocupacion', 100);
             $table->string('estadoCivil', 100);
             $table->string('DNI', 8)->unique();
-            $table->string('celular', 9); 
+            $table->string('celular', 30); 
             $table->string('direccion',150); 
             $table->string('departamento', 100);
             $table->string('pais', 100);  
