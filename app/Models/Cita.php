@@ -10,66 +10,69 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Cita extends Model
 {
     use HasFactory;
-    protected $table = 'citas';
-    protected $primaryKey = 'idCita';
+    protected $table = "citas";
+    protected $primaryKey = "idCita";
     public $timestamps = false;
 
     protected $attributes = [
-        'colores' => '#FFA500',
-        'estado_Cita' => 'Pendiente',
-        'idCanal' => '1',
-        'idEtiqueta' =>  '3',
-        'idTipoCita' => '2',
-        'duracion' => '60'
+        "colores" => "#FFA500",
+        "estado_Cita" => "Pendiente",
+        "idCanal" => "1",
+        "idEtiqueta" => "3",
+        "idTipoCita" => "2",
+        "duracion" => "60",
     ];
 
     protected $fillable = [
-        'idPaciente',
-        'idTipoCita',
-        'idCanal',
-        'idEtiqueta',
-        'idPsicologo',
-        'idPrePaciente',
-        'motivo_Consulta',
-        'estado_Cita',
-        'colores',
-        'duracion',
-        'fecha_cita',
-        'hora_cita',
+        "idPaciente",
+        "idTipoCita",
+        "idCanal",
+        "idEtiqueta",
+        "idPsicologo",
+        "idPrePaciente",
+        "motivo_Consulta",
+        "estado_Cita",
+        "colores",
+        "duracion",
+        "fecha_cita",
+        "hora_cita",
     ];
 
     public function etiqueta(): BelongsTo
     {
-        return $this->belongsTo(etiqueta::class, foreignKey: 'idEtiqueta');
+        return $this->belongsTo(Etiqueta::class, foreignKey: "idEtiqueta");
     }
 
     public function tipoCita(): BelongsTo
     {
-        return $this->belongsTo(tipoCita::class, foreignKey: 'idTipoCita');
+        return $this->belongsTo(TipoCita::class, foreignKey: "idTipoCita");
     }
 
     public function canal(): BelongsTo
     {
-        return $this->belongsTo(canal::class, foreignKey: 'idCanal');
+        return $this->belongsTo(Canal::class, foreignKey: "idCanal");
     }
 
     public function prepaciente(): BelongsTo
     {
-        return $this->belongsTo(PrePaciente::class, foreignKey: 'idPrePaciente');
+        return $this->belongsTo(
+            PrePaciente::class,
+            foreignKey: "idPrePaciente"
+        );
     }
 
     public function paciente(): BelongsTo
     {
-        return $this->belongsTo(Paciente::class, foreignKey: 'idPaciente');
+        return $this->belongsTo(Paciente::class, foreignKey: "idPaciente");
     }
 
     public function atenciones(): HasMany
     {
-        return $this->hasMany(Atencion::class, 'idCita');
+        return $this->hasMany(Atencion::class, "idCita");
     }
 
     public function psicologo(): BelongsTo
     {
-        return $this->belongsTo(psicologo::class, 'idPsicologo');
+        return $this->belongsTo(Psicologo::class, "idPsicologo");
     }
 }
