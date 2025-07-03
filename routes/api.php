@@ -15,7 +15,6 @@ use App\Http\Controllers\Pacientes\PacienteController;
 use App\Http\Controllers\Prepaciente\PrePacienteController;
 use App\Http\Controllers\RespuestasBlog\RespuestaComentarioController;
 use App\Http\Controllers\RegistroFamiliar\RegistroFamiliarController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Estadisticas\EstadisticasController;
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
