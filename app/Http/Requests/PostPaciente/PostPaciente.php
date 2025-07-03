@@ -51,7 +51,6 @@ class PostPaciente extends FormRequest
             "celular" => "required|string|min:3|max:30",
             "direccion" => "required|string|max:250",
             "pais" => "required|string|max:100",
-            // "provincia" => "required|string|max:100",
             "departamento" => "required|string|max:100",
         ];
     }
