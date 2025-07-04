@@ -3,7 +3,6 @@
 namespace App\Http\Requests\PostPaciente;
 
 use App\Models\Paciente;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,41 +16,42 @@ class PostPaciente extends FormRequest
         return true;
     }
 
-    public function prepareForValidation(): void
+
+    public function prepareForValidation()
     {
-        $routeId = $this->route('id');
-        if ($routeId) {
-            /** @var Paciente|null $paciente */
-            $paciente = Paciente::query()->find($routeId);
-            if ($paciente) {
-                $this->merge(['idPaciente' => $paciente->getAttribute('idPaciente')]);
-            }
+        if ($paciente = Paciente::find($this->route("id"))) {
+            $this->merge(["idPaciente" => $paciente->idPaciente]);
         }
     }
 
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'nombre' => 'required|string|max:100',
-            'apellido' => 'required|string|max:100',
-            'email' => [
-                'required',
-                'email',
-                'max:100',
-                Rule::unique('pacientes', 'email')->ignore($this->input('idPaciente'), 'idPaciente'),
+            "nombre" => "required|string|max:100",
+            "apellido" => "required|string|max:100",
+            "email" => [
+                "required",
+                "email",
+                "max:100",
+                Rule::unique("pacientes", "email")->ignore(
+                    $this->input("idPaciente"),
+                    "idPaciente"
+                ),
             ],
-            'fecha_nacimiento' => 'required',
-            'ocupacion' => 'required|string|max:100',
-            'estadoCivil' => 'required|string|max:100',
-            'genero' => 'required|string|max:20',
-            'DNI' => 'required|string',
-            'celular' => 'required|string|min:9|max:9',
-            'direccion' => 'required|string|max:250',
+            "fecha_nacimiento" => "required",
+            "ocupacion" => "required|string|max:100",
+            "estadoCivil" => "required|string|max:100",
+            "genero" => "required|string|max:20",
+            "DNI" => "required|string",
+            "celular" => "required|string|min:3|max:30",
+            "direccion" => "required|string|max:250",
+            "pais" => "required|string|max:100",
+            "departamento" => "required|string|max:100",
         ];
     }
 }

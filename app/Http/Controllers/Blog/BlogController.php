@@ -48,7 +48,8 @@ class BlogController extends Controller
                     'id' => $blog->idBlog,
                     'tema' => $blog->tema,
                     'contenido' => Str::limit($blog->contenido, 150),
-                    'imagen' => $blog->imagen,
+                    'imagenes' => $blog->imagenes, // Array de imágenes
+                    'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                     'nombrePsicologo' => $blog->psicologo->users->name . ' ' . $blog->psicologo->users->apellido,
                     'psicologoImagenId' => $blog->psicologo->users->imagen,
                     'categoria' =>  $blog->categoria->nombre,
@@ -79,7 +80,8 @@ class BlogController extends Controller
                 'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
                 'contenido' => $blog->contenido,
-                'imagen' => $blog->imagen,
+                'imagenes' => $blog->imagenes, // Array de imágenes
+                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
@@ -111,11 +113,13 @@ class BlogController extends Controller
                 'id' => $blog->idBlog,
                 'tema' => $blog->tema,
                 'contenido' => $blog->contenido,
-                'imagen' => $blog->imagen,
+                'imagenes' => $blog->imagenes, // Array de imágenes
+                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
-                 'idCategoria'=> $blog->categoria->idCategoria,
+                'idCategoria'=> $blog->categoria->idCategoria,
+                'idPsicologo' => $blog->idPsicologo, // Agregamos el ID del psicólogo
                 'categoria' =>  $blog->categoria->nombre,
                 'fecha' => $blog->fecha_publicado,
             ];
@@ -158,7 +162,24 @@ class BlogController extends Controller
     public function updateBlog(PostBlogs $request, int $id): JsonResponse
     {
         try {
+            $userId = Auth::id();
+            $currentPsicologo = Psicologo::where('user_id', $userId)->first();
+
+            if (!$currentPsicologo) {
+                return HttpResponseHelper::make()
+                    ->forbiddenResponse('No tienes permisos para actualizar blogs')
+                    ->send();
+            }
+
             $blog = Blog::findOrFail($id);
+
+            // Verificar que el blog pertenece al psicólogo actual
+            if ($blog->idPsicologo !== $currentPsicologo->idPsicologo) {
+                return HttpResponseHelper::make()
+                    ->forbiddenResponse('No puedes editar blogs que no te pertenecen')
+                    ->send();
+            }
+
             $blog->update($request->all());
 
             return HttpResponseHelper::make()
@@ -174,7 +195,24 @@ class BlogController extends Controller
     public function destroyBlog(int $id): JsonResponse
     {
         try {
+            $userId = Auth::id();
+            $currentPsicologo = Psicologo::where('user_id', $userId)->first();
+
+            if (!$currentPsicologo) {
+                return HttpResponseHelper::make()
+                    ->forbiddenResponse('No tienes permisos para eliminar blogs')
+                    ->send();
+            }
+
             $blog = Blog::findOrFail($id);
+
+            // Verificar que el blog pertenece al psicólogo actual
+            if ($blog->idPsicologo !== $currentPsicologo->idPsicologo) {
+                return HttpResponseHelper::make()
+                    ->forbiddenResponse('No puedes eliminar blogs que no te pertenecen')
+                    ->send();
+            }
+
             $blog->delete();
 
             return HttpResponseHelper::make()
@@ -183,6 +221,48 @@ class BlogController extends Controller
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al eliminar el blog: ' . $e->getMessage())
+                ->send();
+        }
+    }
+
+    /**
+     * Obtener blogs específicos de un psicólogo
+     */
+    public function showBlogsByPsicologo($idPsicologo)
+    {
+        try {
+            $userId = Auth::id();
+            $currentPsicologo = Psicologo::where('user_id', $userId)->first();
+
+            // Verificar que el psicólogo autenticado solo pueda ver sus propios blogs
+            if (!$currentPsicologo || $currentPsicologo->idPsicologo != $idPsicologo) {
+                return HttpResponseHelper::make()
+                    ->forbiddenResponse('No tienes permisos para ver estos blogs')
+                    ->send();
+            }
+
+            $blogs = Blog::with('categoria', 'psicologo.users')
+                ->where('idPsicologo', $idPsicologo)
+                ->orderBy('fecha_publicado', 'desc')
+                ->get()
+                ->map(function ($blog) {
+                    return [
+                        'idBlog' => $blog->idBlog,
+                        'tema' => $blog->tema,
+                        'contenido' => Str::limit($blog->contenido, 150),
+                        'imagenes' => $blog->imagenes, // Array de imágenes
+                        'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
+                        'categoria' => $blog->categoria->nombre,
+                        'idPsicologo' => $blog->idPsicologo,
+                    ];
+                });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Blogs del psicólogo obtenidos correctamente', $blogs)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Error al obtener los blogs: ' . $e->getMessage())
                 ->send();
         }
     }

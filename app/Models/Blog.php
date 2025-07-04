@@ -19,8 +19,12 @@ class Blog extends Model
         'idCategoria',
         'tema',
         'contenido',
-        'imagen',
+        'imagenes',
         'idPsicologo',
+    ];
+
+    protected $casts = [
+        'imagenes' => 'array',
     ];
 
     public function psicologo(): BelongsTo

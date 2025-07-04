@@ -14,9 +14,9 @@ class EtiquetaSeeder extends Seeder
     public function run(): void
     {
         $etiquetas = [
-            ['nombre' => 'Importante'],
-            ['nombre' => 'Urgente'],
-            ['nombre' => 'Normal'],
+            ["nombre" => "Importante"],
+            ["nombre" => "Urgente"],
+            ["nombre" => "Normal"],
         ];
 
         foreach ($etiquetas as $etiqueta) {

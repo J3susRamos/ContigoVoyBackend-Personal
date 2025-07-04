@@ -30,7 +30,9 @@ class RegistroFamiliarController extends Controller
     public function showRegistro(int $id): JsonResponse
     {
         try {
-            $registroFamiliar = RegistroFamiliar::where('idPaciente', $id)->first();
+            $registroFamiliar = RegistroFamiliar::with('paciente:idPaciente,nombre,apellido,codigo')
+                ->where('idPaciente', $id)
+                ->first();
 
             if (!$registroFamiliar) {
                 return HttpResponseHelper::make()
