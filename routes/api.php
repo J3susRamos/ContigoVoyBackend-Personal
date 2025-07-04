@@ -160,15 +160,15 @@ Route::controller(EstadisticasController::class)
         Route::get('/porcentaje-genero', 'porcentajePacientesPorGenero');
     });
 
-Route::controller(MarketingController::class)->prefix('marketing')->middleware(['auth:sanctum', 'role:PSICOLOGO'])->group(function () {
-    Route::post('/', 'crearPlantilla');                      
+Route::controller(MarketingController::class)->prefix('marketing')->middleware(['auth:sanctum', 'role:PSICOLOGO|ADMIN'])->group(function () {
+    Route::post('/', 'crearPlantilla');
     Route::get('/', 'listarPorPsicologo');
-    Route::get('/{id}', 'detallePlantilla');                  
-    Route::put('/{id}', 'actualizarPlantilla');             
-    Route::delete('/{id}', 'eliminarPlantilla'); 
-    Route::post('/enviar', 'enviarEmail');     
+    Route::get('/{id}', 'detallePlantilla');
+    Route::put('/{id}', 'actualizarPlantilla');
+    Route::delete('/{id}', 'eliminarPlantilla');
+    Route::post('/enviar', 'enviarEmail');
     Route::get('/pacientes-emails', 'listarEmailsPacientes');
-       
+
 });
-    
-    
+
+
