@@ -31,6 +31,10 @@ class PacienteController extends Controller
             }
 
             $pacienteData = $requestPaciente->all();
+            $pacienteData["apellido"] = trim(
+                $pacienteData["apellidoPaterno"] . " " . $pacienteData["apellidoMaterno"]
+            );
+            unset($pacienteData["apellidoPaterno"], $pacienteData["apellidoMaterno"]);
             $pacienteData["fecha_nacimiento"] = Carbon::createFromFormat(
                 "d / m / Y",
                 $pacienteData["fecha_nacimiento"]
