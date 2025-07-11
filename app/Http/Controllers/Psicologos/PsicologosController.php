@@ -16,6 +16,7 @@ use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PsicologosController extends Controller
 {
@@ -90,39 +91,95 @@ class PsicologosController extends Controller
         }
     }
 
-    public function showAllPsicologos(): JsonResponse
+    public function showAllPsicologos(Request $request): JsonResponse
     {
         try {
-            $psicologos = Psicologo::with(['especialidades', 'users'])
-                ->where('estado', 'A')
-                ->get()
-                ->map(function ($psicologo) {
-                    return [
-                        // se modifico 'Titulo' a 'titulo'
-                        'idPsicologo' => $psicologo->idPsicologo,
-                        'titulo' => $psicologo->titulo,
-                        'nombre' => $psicologo->users->name,
-                        'apellido' => $psicologo->users->apellido,
-                        'pais' => $psicologo->pais,
-                        'edad' => $psicologo->users->edad,
-                        'genero' => $psicologo->genero,
-                        'experiencia' => $psicologo->experiencia,
-                        'especialidades' => $psicologo->especialidades->pluck('nombre'),
-                        'introduccion' => $psicologo->introduccion,
-                        'horario' => $psicologo->horario,
-                        'correo' => $psicologo->users->email,
-                        'imagen' => $psicologo->users->imagen,
-                    ];
+            $shouldPaginate = $request->query("paginate", false);
+            $perPage = $request->query("per_page", 10);
+
+            $query = Psicologo::with(['especialidades', 'users'])->where('estado', 'A');
+
+            if ($request->filled("pais")) {
+                $paises = explode(",", $request->query("pais"));
+                $query->whereIn("pais", $paises);
+            }
+
+            if ($request->filled("genero")) {
+                $generos = explode(",", $request->query("genero"));
+                $query->whereIn("genero", $generos);
+            }
+
+            if ($request->filled("idioma")) {
+                $idiomas = explode(",", $request->query("idioma"));
+                $query->whereIn("idioma", $idiomas);
+            }
+
+            if ($request->filled("enfoque")) {
+                $enfoques = explode(",", $request->query("enfoque"));
+                $query->whereHas("especialidades", function ($q) use ($enfoques) {
+                    $q->whereIn("nombre", $enfoques);
+                });
+            }
+
+            if ($request->filled("search")) {
+                $search = $request->query("search");
+                $query->whereHas("users", function ($q) use ($search) {
+                    $q->where("name", "like", "%{$search}%")
+                        ->orWhere("apellido", "like", "%{$search}%");
+                });
+            }
+
+            if ($shouldPaginate) {
+                $paginator = $query->paginate($perPage);
+                $data = collect($paginator->items())->map(function ($psicologo) {
+                    return $this->mapPsicologo($psicologo);
                 });
 
-            return HttpResponseHelper::make()
-                ->successfulResponse('Lista de psicologos obtenida correctamente', $psicologos)
-                ->send();
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Psicólogos obtenidos correctamente", [
+                        "data" => $data,
+                        "pagination" => [
+                            "current_page" => $paginator->currentPage(),
+                            "last_page" => $paginator->lastPage(),
+                            "per_page" => $paginator->perPage(),
+                            "total" => $paginator->total(),
+                        ],
+                    ])
+                    ->send();
+            } else {
+                $psicologos = $query->get();
+                $data = $psicologos->map(function ($psicologo) {
+                    return $this->mapPsicologo($psicologo);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Psicólogos obtenidos correctamente", $data)
+                    ->send();
+            }
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
-                ->internalErrorResponse('Ocurrió un problema al obtener los psicologos: ' . $e->getMessage())
+                ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
                 ->send();
         }
+    }
+
+    private function mapPsicologo($psicologo): array
+    {
+        return [
+            'idPsicologo' => $psicologo->idPsicologo,
+            'titulo' => $psicologo->titulo,
+            'nombre' => $psicologo->users->name,
+            'apellido' => $psicologo->users->apellido,
+            'pais' => $psicologo->pais,
+            'edad' => $psicologo->users->edad,
+            'genero' => $psicologo->genero,
+            'experiencia' => $psicologo->experiencia,
+            'especialidades' => $psicologo->especialidades->pluck('nombre'),
+            'introduccion' => $psicologo->introduccion,
+            'horario' => $psicologo->horario,
+            'correo' => $psicologo->users->email,
+            'imagen' => $psicologo->users->imagen,
+        ];
     }
 
     public function updatePsicologo(PutPsicologo $requestPsicologo, PutUser $requestUser, int $id): JsonResponse
@@ -221,34 +278,34 @@ class PsicologosController extends Controller
         $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
 
         $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
-        ->whereIn('estado_Cita', ['completada', 'pendiente'])
-        ->sum('duracion');
+            ->whereIn('estado_Cita', ['completada', 'pendiente'])
+            ->sum('duracion');
 
         // Total de pacientes únicos
         $totalPacientes = Cita::where('idPsicologo', $idPsicologo)
-        ->whereNotNull('idPaciente')
-        ->distinct('idPaciente')
-        ->count('idPaciente');
+            ->whereNotNull('idPaciente')
+            ->distinct('idPaciente')
+            ->count('idPaciente');
 
         // Nuevos pacientes en los últimos 30 días (por su primera cita)
         $nuevosPacientes = Cita::select('idPaciente')
-        ->where('idPsicologo', $idPsicologo)
-        ->whereNotNull('idPaciente')
-        ->selectRaw('MIN(fecha_Cita) as primera_cita, idPaciente')
-        ->groupBy('idPaciente')
-        ->havingRaw('primera_cita >= ?', [now()->subDays(30)])
-        ->get()
-        ->count();
+            ->where('idPsicologo', $idPsicologo)
+            ->whereNotNull('idPaciente')
+            ->selectRaw('MIN(fecha_Cita) as primera_cita, idPaciente')
+            ->groupBy('idPaciente')
+            ->havingRaw('primera_cita >= ?', [now()->subDays(30)])
+            ->get()
+            ->count();
 
         return HttpResponseHelper::make()
-            ->successfulResponse('Datos del dashboard cargados correctamente',[
-               'total_citas' => $totalCitas,
-            'citas_completadas' => $citasCompletadas,
-            'citas_pendientes' => $citasPendientes,
-            'citas_canceladas' => $citasCanceladas,
-            'total_minutos_reservados' => $totalMinutosReservados,
-            'total_pacientes' => $totalPacientes,
-            'nuevos_pacientes' => $nuevosPacientes,
+            ->successfulResponse('Datos del dashboard cargados correctamente', [
+                'total_citas' => $totalCitas,
+                'citas_completadas' => $citasCompletadas,
+                'citas_pendientes' => $citasPendientes,
+                'citas_canceladas' => $citasCanceladas,
+                'total_minutos_reservados' => $totalMinutosReservados,
+                'total_pacientes' => $totalPacientes,
+                'nuevos_pacientes' => $nuevosPacientes,
             ])
             ->send();
     }
