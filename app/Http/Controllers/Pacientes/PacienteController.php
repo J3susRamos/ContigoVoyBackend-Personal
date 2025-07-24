@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Pacientes;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PostPaciente\PostPaciente;
-use App\Http\Requests\PostUser\PostUser;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Psicologo;
@@ -16,7 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class PacienteController extends Controller
 {
-    public function createPaciente(PostPaciente $requestPaciente)
+
+    public function createPaciente(PostPaciente $requestPaciente, $idCita = null)
     {
         try {
             $userId = Auth::id();
@@ -24,9 +24,7 @@ class PacienteController extends Controller
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
-                    ->unauthorizedResponse(
-                        "Solo los psicólogos pueden crear pacientes"
-                    )
+                    ->unauthorizedResponse("Solo los psicólogos pueden crear pacientes")
                     ->send();
             }
 
@@ -42,7 +40,13 @@ class PacienteController extends Controller
             $pacienteData["idPsicologo"] = $psicologo->idPsicologo;
             $pacienteData["codigo"] = Paciente::generatePacienteCode();
 
-            Paciente::create($pacienteData);
+            $paciente = Paciente::create($pacienteData);
+
+            // Si viene el idCita, actualiza las citas
+            if ($idCita) {
+                Cita::where('idCita', $idCita)
+                    ->update(['idPaciente' => $paciente->idPaciente]);
+            }
 
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente creado correctamente")
@@ -50,8 +54,7 @@ class PacienteController extends Controller
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
-                    "Ocurrio un problema al procesar la solicitud." .
-                        $e->getMessage()
+                    "Ocurrio un problema al procesar la solicitud." . $e->getMessage()
                 )
                 ->send();
         }
