@@ -58,18 +58,23 @@ class PrePacienteController extends Controller
 
             $adminEmail = config('emails.admin_address', 'contigovoyproject@gmail.com');
 
-            Mail::to($adminEmail)->send(new PrePacienteCreado($datos));
+            try {
+                Mail::to($adminEmail)->send(new PrePacienteCreado($datos));
 
-            Mail::to($prePaciente->correo)->send(new \App\Mail\ConfirmacionPrePaciente([
-                'nombre' => $prePaciente->nombre,
-                'fecha'  => $request->input('fecha_cita'),
-                'hora'   => $request->input('hora_cita'),
-                'psicologo' => (
-                    $prePaciente->psicologo && $prePaciente->psicologo->users
-                        ? $prePaciente->psicologo->users->name . ' ' . $prePaciente->psicologo->users->apellido
-                        : 'No disponible'
-                ),
-            ]));
+                Mail::to($prePaciente->correo)->send(new \App\Mail\ConfirmacionPrePaciente([
+                    'nombre' => $prePaciente->nombre,
+                    'fecha'  => $request->input('fecha_cita'),
+                    'hora'   => $request->input('hora_cita'),
+                    'psicologo' => (
+                        $prePaciente->psicologo && $prePaciente->psicologo->users
+                            ? $prePaciente->psicologo->users->name . ' ' . $prePaciente->psicologo->users->apellido
+                            : 'No disponible'
+                    ),
+                ]));
+            } catch (\Exception $mailError) {
+                // Log the email error but don't fail the entire operation
+                \Log::error('Error sending email: ' . $mailError->getMessage());
+            }
 
             return HttpResponseHelper::make()
                 ->successfulResponse('PrePaciente creado correctamente y correo enviado.')

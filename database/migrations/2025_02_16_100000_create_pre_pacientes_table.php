@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unsignedInteger('idPsicologo');
             $table->timestamps();
 
-            $table->foreign('idPsicologo')->references('user_id')->on('users')->onDelete('cascade');
+            $table->foreign('idPsicologo')->references('idPsicologo')->on('psicologos')->onDelete('cascade');
         });
 
     }
@@ -29,7 +29,7 @@ return new class extends Migration
      * Reverse the migrations.
      */
     public function down(): void
-    { 
+    {
         Schema::dropIfExists('pre_pacientes');
     }
 };
