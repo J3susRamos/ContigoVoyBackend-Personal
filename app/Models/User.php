@@ -38,6 +38,11 @@ class User extends Authenticatable
          return $this->hasOne(Psicologo::class, 'user_id', 'user_id');
      }
 
+     public function pacientes(): HasOne
+     {
+         return $this->hasOne(Paciente::class, 'user_id', 'user_id');
+     }
+
      public function getEdadAttribute(): int
      {
          return Carbon::parse($this->fecha_nacimiento)->age;

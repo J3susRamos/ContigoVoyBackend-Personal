@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Pacientes;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PostPaciente\PostPaciente;
+use App\Http\Requests\PostUser\PostUser;
+use App\Models\User;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Psicologo;
@@ -19,43 +21,53 @@ class PacienteController extends Controller
     public function createPaciente(PostPaciente $requestPaciente, $idCita = null)
     {
         try {
-            $userId = Auth::id();
-            $psicologo = Psicologo::where("user_id", $userId)->first();
+            $psicologoAuthId = Auth::id();
+            $psicologo = Psicologo::where("user_id", $psicologoAuthId)->first();
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
                     ->unauthorizedResponse("Solo los psicólogos pueden crear pacientes")
+                    ->unauthorizedResponse("Solo los psicólogos pueden crear pacientes")
                     ->send();
             }
 
-            $pacienteData = $requestPaciente->all();
-            $pacienteData["apellido"] = trim(
-                $pacienteData["apellidoPaterno"] . " " . $pacienteData["apellidoMaterno"]
-            );
-            unset($pacienteData["apellidoPaterno"], $pacienteData["apellidoMaterno"]);
-            $pacienteData["fecha_nacimiento"] = Carbon::createFromFormat(
-                "d / m / Y",
-                $pacienteData["fecha_nacimiento"]
-            )->format("Y-m-d");
-            $pacienteData["idPsicologo"] = $psicologo->idPsicologo;
-            $pacienteData["codigo"] = Paciente::generatePacienteCode();
+            $data = $requestPaciente->validated();
 
-            $paciente = Paciente::create($pacienteData);
+            // datos del usuario
+            $user = new User();
+            $user->name = $data["nombre"];
+            $user->apellido = trim($data["apellidoPaterno"] . " " . $data["apellidoMaterno"]);
+            $user->email = $data["email"];
+            $user->password = bcrypt($data["password"]);
+            $user->fecha_nacimiento = Carbon::createFromFormat("d / m / Y", $data["fecha_nacimiento"])->format("Y-m-d");
+            $user->rol = "PACIENTE";
+            $user->save();
 
-            // Si viene el idCita, actualiza las citas
-            if ($idCita) {
-                Cita::where('idCita', $idCita)
-                    ->update(['idPaciente' => $paciente->idPaciente]);
-            }
+            // paciente con el user_id relacionado
+            $paciente = new Paciente();
+            $paciente->nombre = $data["nombre"];
+            $paciente->apellido = $user->apellido;
+            $paciente->email = $data["email"];
+            $paciente->fecha_nacimiento = $user->fecha_nacimiento;
+            $paciente->genero = $data["genero"];
+            $paciente->ocupacion = $data["ocupacion"];
+            $paciente->estadoCivil = $data["estadoCivil"];
+            $paciente->DNI = $data["DNI"];
+            $paciente->celular = $data["celular"];
+            $paciente->direccion = $data["direccion"];
+            $paciente->departamento = $data["departamento"];
+            $paciente->pais = $data["pais"];
+            $paciente->idPsicologo = $psicologo->idPsicologo;
+            $paciente->codigo = Paciente::generatePacienteCode();
+            $paciente->user_id = $user->user_id;
+            $paciente->save();
 
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente creado correctamente")
                 ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
-                ->internalErrorResponse(
-                    "Ocurrio un problema al procesar la solicitud." . $e->getMessage()
-                )
+                ->internalErrorResponse("Ocurrió un problema al procesar la solicitud. " . $e->getMessage())
                 ->send();
         }
     }

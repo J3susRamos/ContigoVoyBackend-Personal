@@ -7,6 +7,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use App\Models\Paciente;
 use App\Models\Psicologo;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class PacienteSeeder extends Seeder
 {
@@ -84,9 +86,21 @@ class PacienteSeeder extends Seeder
 
 
         foreach ($pacientes as $index => $paciente) {
-            $paciente["codigo"] =
-                "PAC" . str_pad($index + 1, 4, "0", STR_PAD_LEFT);
+        $usuario = User::create([
+            'name' => $paciente['nombre'],
+            'apellido' => $paciente['apellido'],
+            'email' => $paciente['email'],
+            'fecha_nacimiento' => $paciente['fecha_nacimiento'],
+            'imagen' => $paciente['imagen'],
+            'password' => Hash::make('password123'),
+            'rol' => 'PACIENTE'
+        ]);
+
+            $usuario->assignRole('PACIENTE');
+
+            $paciente['user_id'] = $usuario->user_id;
+            $paciente["codigo"] = "PAC" . str_pad($index + 1, 4, "0", STR_PAD_LEFT);
             Paciente::create($paciente);
-        }
+}
     }
 }
