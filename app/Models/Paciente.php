@@ -38,6 +38,7 @@ class Paciente extends Model
         "idPsicologo",
         "pais",
         "departamento",
+        "user_id",
     ];
 
     public function citas(): HasMany
@@ -69,5 +70,10 @@ class Paciente extends Model
         $newNumber = $lastCode ? $lastCode + 1 : 1;
 
         return "PAC" . str_pad($newNumber, 4, "0", STR_PAD_LEFT);
+    }
+
+    public function users(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 }
