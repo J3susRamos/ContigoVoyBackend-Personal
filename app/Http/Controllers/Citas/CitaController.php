@@ -87,6 +87,25 @@ class CitaController extends Controller
                 });
             }
 
+            if ($request->filled('codigo')) {
+                $codigo = $request->query('codigo');
+
+                $query->where(function ($q) use ($codigo) {
+                    // Si el código parece de prepaciente (ajusta la condición según tu lógica)
+                    if (str_starts_with($codigo, 'Pre')) {
+                        $q->whereNull('idPaciente')
+                            ->whereHas('paciente', function ($subQ) use ($codigo) {
+                                $subQ->where('nombre', 'like', "%$codigo%");
+                            });
+                    } else {
+                        $q->whereNotNull('idPaciente')
+                            ->whereHas('paciente', function ($subQ) use ($codigo) {
+                                $subQ->where('codigo', 'like', "%$codigo%");
+                            });
+                    }
+                });
+            }
+
             if ($request->filled('nombre')) {
                 $nombre = $request->query('nombre');
 
@@ -297,7 +316,7 @@ class CitaController extends Controller
     }
 
     $idPsicologo = $psicologo->idPsicologo;
-    
+
     $citas = Cita::selectRaw('DATE(fecha_cita) as fecha, COUNT(*) as total')
         ->where('idPsicologo', $idPsicologo)
         ->groupBy('fecha_cita')
