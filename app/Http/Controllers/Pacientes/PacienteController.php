@@ -14,6 +14,7 @@ use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class PacienteController extends Controller
 {
@@ -142,6 +143,14 @@ class PacienteController extends Controller
                 $pacienteData["fecha_nacimiento"]
             )->format("Y-m-d");
             $paciente->update($pacienteData);
+
+            if (!empty($pacienteData['password'])) {
+                $user = $paciente->user;
+                if ($user) {
+                    $user->password = Hash::make($pacienteData['password']);
+                    $user->save();
+                }
+            }
 
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente actualizado correctamente")
@@ -311,17 +320,42 @@ class PacienteController extends Controller
                 ->where("idPsicologo", $psicologo->idPsicologo)
                 ->first();
 
+            if (!$paciente) {
+                return HttpResponseHelper::make()
+                    ->notFoundResponse("Paciente no encontrado.")
+                    ->send();
+            }
+
+            $userPassword = optional($paciente->user)->password;
+
+            $response = [
+                'idPaciente' => $paciente->idPaciente,
+                'codigo' => $paciente->codigo,
+                'nombre' => $paciente->nombre,
+                'apellido' => $paciente->apellido,
+                'email' => $paciente->email,
+                'fecha_nacimiento' => $paciente->fecha_nacimiento,
+                'imagen' => $paciente->imagen,
+                'genero' => $paciente->genero,
+                'ocupacion' => $paciente->ocupacion,
+                'estadoCivil' => $paciente->estadoCivil,
+                'DNI' => $paciente->DNI,
+                'celular' => $paciente->celular,
+                'direccion' => $paciente->direccion,
+                'departamento' => $paciente->departamento,
+                'pais' => $paciente->pais,
+                'idPsicologo' => $paciente->idPsicologo,
+                'user_id' => $paciente->user_id,
+                'password' => $userPassword,
+            ];
+
             return HttpResponseHelper::make()
-                ->successfulResponse(
-                    "Paciente obtenido correctamente",
-                    $paciente->toArray()
-                )
+                ->successfulResponse("Paciente obtenido correctamente", $response)
                 ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
-                    "Ocurrió un problema al procesar la solicitud. " .
-                        $e->getMessage()
+                    "Ocurrió un problema al procesar la solicitud. " . $e->getMessage()
                 )
                 ->send();
         }
