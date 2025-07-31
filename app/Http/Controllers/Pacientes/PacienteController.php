@@ -15,6 +15,9 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CredencialesPacienteMail;
 
 class PacienteController extends Controller
 {
@@ -34,12 +37,14 @@ class PacienteController extends Controller
 
             $data = $requestPaciente->validated();
 
+            $randomPassword = Str::random(8);
+
             // datos del usuario
             $user = new User();
             $user->name = $data["nombre"];
             $user->apellido = trim($data["apellidoPaterno"] . " " . $data["apellidoMaterno"]);
             $user->email = $data["email"];
-            $user->password = bcrypt($data["password"]);
+            $user->password = bcrypt($randomPassword);
             $user->fecha_nacimiento = Carbon::createFromFormat("d / m / Y", $data["fecha_nacimiento"])->format("Y-m-d");
             $user->rol = "PACIENTE";
             $user->save();
@@ -63,9 +68,16 @@ class PacienteController extends Controller
             $paciente->user_id = $user->user_id;
             $paciente->save();
 
+            Mail::to($user->email)->send(new CredencialesPacienteMail(
+                $user->name,
+                $user->email,
+                $randomPassword
+            ));
+
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente creado correctamente")
                 ->send();
+
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse("Ocurrió un problema al procesar la solicitud. " . $e->getMessage())
