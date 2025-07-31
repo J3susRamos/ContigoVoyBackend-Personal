@@ -14,6 +14,10 @@ use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CredencialesPacienteMail;
 
 class PacienteController extends Controller
 {
@@ -33,12 +37,14 @@ class PacienteController extends Controller
 
             $data = $requestPaciente->validated();
 
+            $randomPassword = Str::random(8);
+
             // datos del usuario
             $user = new User();
             $user->name = $data["nombre"];
             $user->apellido = trim($data["apellidoPaterno"] . " " . $data["apellidoMaterno"]);
             $user->email = $data["email"];
-            $user->password = bcrypt($data["password"]);
+            $user->password = bcrypt($randomPassword);
             $user->fecha_nacimiento = Carbon::createFromFormat("d / m / Y", $data["fecha_nacimiento"])->format("Y-m-d");
             $user->rol = "PACIENTE";
             $user->save();
@@ -62,9 +68,16 @@ class PacienteController extends Controller
             $paciente->user_id = $user->user_id;
             $paciente->save();
 
+            Mail::to($user->email)->send(new CredencialesPacienteMail(
+                $user->name,
+                $user->email,
+                $randomPassword
+            ));
+
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente creado correctamente")
                 ->send();
+
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse("Ocurrió un problema al procesar la solicitud. " . $e->getMessage())
@@ -142,6 +155,14 @@ class PacienteController extends Controller
                 $pacienteData["fecha_nacimiento"]
             )->format("Y-m-d");
             $paciente->update($pacienteData);
+
+            if (!empty($pacienteData['password'])) {
+                $user = $paciente->user;
+                if ($user) {
+                    $user->password = Hash::make($pacienteData['password']);
+                    $user->save();
+                }
+            }
 
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente actualizado correctamente")
@@ -311,17 +332,42 @@ class PacienteController extends Controller
                 ->where("idPsicologo", $psicologo->idPsicologo)
                 ->first();
 
+            if (!$paciente) {
+                return HttpResponseHelper::make()
+                    ->notFoundResponse("Paciente no encontrado.")
+                    ->send();
+            }
+
+            $userPassword = optional($paciente->user)->password;
+
+            $response = [
+                'idPaciente' => $paciente->idPaciente,
+                'codigo' => $paciente->codigo,
+                'nombre' => $paciente->nombre,
+                'apellido' => $paciente->apellido,
+                'email' => $paciente->email,
+                'fecha_nacimiento' => $paciente->fecha_nacimiento,
+                'imagen' => $paciente->imagen,
+                'genero' => $paciente->genero,
+                'ocupacion' => $paciente->ocupacion,
+                'estadoCivil' => $paciente->estadoCivil,
+                'DNI' => $paciente->DNI,
+                'celular' => $paciente->celular,
+                'direccion' => $paciente->direccion,
+                'departamento' => $paciente->departamento,
+                'pais' => $paciente->pais,
+                'idPsicologo' => $paciente->idPsicologo,
+                'user_id' => $paciente->user_id,
+                'password' => $userPassword,
+            ];
+
             return HttpResponseHelper::make()
-                ->successfulResponse(
-                    "Paciente obtenido correctamente",
-                    $paciente->toArray()
-                )
+                ->successfulResponse("Paciente obtenido correctamente", $response)
                 ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
-                    "Ocurrió un problema al procesar la solicitud. " .
-                        $e->getMessage()
+                    "Ocurrió un problema al procesar la solicitud. " . $e->getMessage()
                 )
                 ->send();
         }

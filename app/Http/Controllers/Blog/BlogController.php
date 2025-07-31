@@ -43,7 +43,7 @@ class BlogController extends Controller
     public function showAllBlogs(): JsonResponse
     {
         try {
-            $blogs = Blog::with('categoria', 'psicologo.users')->get()->map(function ($blog) {
+            $blogs = Blog::with('categoria', 'psicologo.users')->orderBy('fecha_publicado','desc')->get()->map(function ($blog) {
                 return [
                     'id' => $blog->idBlog,
                     'tema' => $blog->tema,
@@ -74,7 +74,7 @@ class BlogController extends Controller
                 'categoria:idCategoria,nombre',
                 'psicologo:idPsicologo,user_id',
                 'psicologo.users:user_id,name,apellido,imagen',
-            ])->get();
+            ])->orderBy('fecha_publicado','desc')->get();
 
             $blogs = $blogs->map(fn($blog) => [
                 'idBlog' => $blog->idBlog,

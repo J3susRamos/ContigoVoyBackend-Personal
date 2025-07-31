@@ -72,7 +72,7 @@ class Paciente extends Model
         return "PAC" . str_pad($newNumber, 4, "0", STR_PAD_LEFT);
     }
 
-    public function users(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
