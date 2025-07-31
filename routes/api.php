@@ -17,6 +17,7 @@ use App\Http\Controllers\RespuestasBlog\RespuestaComentarioController;
 use App\Http\Controllers\RegistroFamiliar\RegistroFamiliarController;
 use App\Http\Controllers\Estadisticas\EstadisticasController;
 use App\Http\Controllers\Marketing\MarketingController;
+use App\Http\Controllers\WhatsAppController;
 
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
@@ -171,4 +172,18 @@ Route::controller(MarketingController::class)->prefix('marketing')->middleware([
 
 });
 
+
+// WhatsApp routes
+Route::prefix('whatsapp')->group(function () {
+    // Enviar mensajes
+    Route::post('send-confirmation', [WhatsAppController::class, 'sendAppointmentConfirmation']);
+    Route::post('send-reminder', [WhatsAppController::class, 'sendAppointmentReminder']);
+    Route::post('send-interactive', [WhatsAppController::class, 'sendInteractiveMessage']);
+
+    // Webhook para recibir mensajes
+    Route::match(['get', 'post'], 'webhook', [WhatsAppController::class, 'webhook']);
+
+    // Estado del servicio
+    Route::get('status', [WhatsAppController::class, 'status']);
+});
 
