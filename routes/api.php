@@ -38,6 +38,8 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
         Route::get('/{id}', 'showPacienteById');
         Route::get('/', 'showPacientesByPsicologo');
         Route::put('/{id}', 'updatePaciente');
+        Route::put('/desactivar/{id}', 'disablePatient');
+        Route::put('/activar/{id}', 'enablePatient');
         Route::delete('/{id}', 'destroyPaciente');
         Route::get('/citas/{id}', 'getCitasPaciente');
         Route::get('/estadisticas/genero', 'getPacientesGenero');

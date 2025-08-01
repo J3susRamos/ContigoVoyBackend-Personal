@@ -35,6 +35,14 @@ class PacienteController extends Controller
                     ->send();
             }
 
+            if (PACIENTE::where('DNI',$requestPaciente->DNI)->exists()){
+                return response()->json(['message' => "El DNI ya esta registrado"], 400);
+            }
+
+            if (PACIENTE::where('email', $requestPaciente->email)->exists()){
+                return response()->json(['message' => "El email ya esta registrado"], 400);
+            }
+
             $data = $requestPaciente->validated();
 
             $randomPassword = Str::random(8);
@@ -172,6 +180,42 @@ class PacienteController extends Controller
                 ->internalErrorResponse(
                     "Ocurrio un problema al procesar la solicitud." .
                         $e->getMessage()
+                )
+                ->send();
+        }
+    }
+
+    public function disablePatient(int $id)
+    {
+        try{
+            $paciente = Paciente::findOrFail($id);
+            $paciente -> activo = false;
+            $paciente->save();
+            return HttpResponseHelper::make()
+                ->successfulResponse("Paciente deshabilitado correctamente")
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse(
+                    "Ocurrió un problema al procesar la solicitud. " . $e->getMessage()
+                )
+                ->send();
+        }
+    }
+
+    public function enablePatient(int $id)
+    {
+        try{
+            $paciente = Paciente::findOrFail($id);
+            $paciente -> activo = true;
+            $paciente->save();
+            return HttpResponseHelper::make()
+                ->successfulResponse("Paciente habilitado correctamente")
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse(
+                    "Ocurrió un problema al procesar la solicitud. " . $e->getMessage()
                 )
                 ->send();
         }

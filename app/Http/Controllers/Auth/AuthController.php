@@ -10,6 +10,8 @@ use App\Models\Psicologo;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\JsonResponse;
+use App\Models\Paciente;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -17,6 +19,17 @@ class AuthController extends Controller
     {
         try {
             $user = User::where('email', $request->email)->first();
+
+            if ($user->rol === 'PACIENTE') {
+
+                $paciente = Paciente::where('user_id', $user->user_id)->first();
+
+                if (!$paciente || !$paciente->activo) {
+                    Auth::logout();
+                    return response()->json(['error' => 'Paciente inhabilitado'], 403);
+                }
+            }
+
             if (!$user) {
                 return HttpResponseHelper::make()
                     ->unauthorizedResponse('El correo electrónico no está registrado.');
