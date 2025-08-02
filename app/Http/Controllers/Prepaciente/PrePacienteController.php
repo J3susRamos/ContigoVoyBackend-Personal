@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Prepaciente;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PostCita\PostCita;
 use Illuminate\Http\Request;
 use App\Models\PrePaciente;
 use App\Mail\PrePacienteCreado;
@@ -11,9 +10,9 @@ use App\Models\Cita;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Support\Facades\Mail;
 use Exception;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Log;
 
 class PrePacienteController extends Controller
 {
@@ -73,7 +72,50 @@ class PrePacienteController extends Controller
                 ]));
             } catch (\Exception $mailError) {
                 // Log the email error but don't fail the entire operation
-                \Log::error('Error sending email: ' . $mailError->getMessage());
+                Log::error('Error sending email: ' . $mailError->getMessage());
+            }
+
+            // 🚀 AGREGAR WHATSAPP AQUÍ
+            try {
+                $whatsappService = app(\App\Services\WhatsAppBusinessService::class);
+
+                $nombrePsicologo = (
+                    $prePaciente->psicologo && $prePaciente->psicologo->users
+                    ? $prePaciente->psicologo->users->name . ' ' . $prePaciente->psicologo->users->apellido
+                    : 'tu psicólogo asignado'
+                );
+
+                $mensaje = "¡Hola {$prePaciente->nombre}! 👋\n\n" .
+                    "✅ Tu primera cita GRATUITA ha sido confirmada:\n\n" .
+                    "📅 Fecha: {$request->input('fecha_cita')}\n" .
+                    "🕐 Hora: {$request->input('hora_cita')}\n" .
+                    "👨‍⚕️ Psicólogo: {$nombrePsicologo}\n\n" .
+                    "🎉 ¡Recuerda que tu primera consulta es completamente GRATIS!\n\n" .
+                    "Si tienes alguna consulta, no dudes en contactarnos.\n\n" .
+                    "¡Te esperamos! 🌟";
+
+                $whatsappResult = $whatsappService->sendTextMessage(
+                    $prePaciente->celular, // 👈 Aquí usas la variable del teléfono
+                    $mensaje              // 👈 Tu mensaje personalizado
+                );
+
+                // Log del resultado (opcional)
+                if ($whatsappResult['success']) {
+                    Log::info('WhatsApp sent successfully', [
+                        'patient' => $prePaciente->nombre,
+                        'phone' => $prePaciente->celular,
+                        'message_id' => $whatsappResult['message_id']
+                    ]);
+                } else {
+                    Log::warning('WhatsApp failed to send', [
+                        'patient' => $prePaciente->nombre,
+                        'phone' => $prePaciente->celular,
+                        'error' => $whatsappResult['error']
+                    ]);
+                }
+            } catch (\Exception $whatsappError) {
+                Log::error('WhatsApp service error: ' . $whatsappError->getMessage());
+                // No fallas la operación completa por un error de WhatsApp
             }
 
             return HttpResponseHelper::make()
