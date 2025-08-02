@@ -15,7 +15,7 @@ return new class extends Migration
             $table->increments('idPrePaciente');
             $table->string('nombre', 150);
             $table->string('correo')->unique();
-            $table->string('celular', 9);
+            $table->string('celular', 30);
             $table->string('estado')->default('pendiente');
             $table->unsignedInteger('idPsicologo');
             $table->timestamps();
