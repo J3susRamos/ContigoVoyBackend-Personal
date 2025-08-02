@@ -23,7 +23,7 @@ class PrePacienteController extends Controller
 
             $prePacienteValidated = $request->validate([
                 'nombre' => 'required|string|max:150',
-                'celular' => 'required|string|min:9|max:9',
+                'celular' => 'required|string|min:3|max:30',
                 'correo' => 'required|email|unique:pre_pacientes,correo|max:150',
                 'idPsicologo' => 'required|exists:psicologos,idPsicologo',
             ]);
@@ -130,7 +130,7 @@ class PrePacienteController extends Controller
             $prePaciente = PrePaciente::findOrFail($id);
             $prePaciente->update($request->validate([
                 'nombre' => 'required|string|max:150',
-                'celular' => 'required|string|min:9|max:9',
+                'celular' => 'required|string|min:3|max:30',
                 'correo' => 'required|email|unique:pre_pacientes,correo|max:150',
             ]));
 
