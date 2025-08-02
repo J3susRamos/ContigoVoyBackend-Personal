@@ -56,6 +56,8 @@ Route::controller(PsicologosController::class)->prefix('psicologos')->group(func
         Route::put('/{id}', 'updatePsicologo');
         Route::delete('/{id}', 'DeletePsicologo');
     });
+    Route::put('/update/{id}', 'actualizarPsicologo');
+    Route::get('/especialidades/{id}', 'obtenerEspecialidades');
     Route::get('/', 'showAllPsicologos');
     Route::get('/{id}', 'showById');
 });
