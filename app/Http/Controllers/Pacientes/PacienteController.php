@@ -236,15 +236,14 @@ class PacienteController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Paciente::where(
-                "idPsicologo",
-                $psicologo->idPsicologo
-            )->with([
-                "citas" => function ($query) {
-                    $query
-                        ->orderBy("fecha_cita", "desc")
-                        ->orderBy("hora_cita", "desc")
-                        ->limit(1);
+            $query = Paciente::where("idPsicologo", $psicologo->idPsicologo)
+                ->where("activo", 1)
+                ->with([
+                    "citas" => function ($query) {
+                $query
+                    ->orderBy("fecha_cita", "desc")
+                    ->orderBy("hora_cita", "desc")
+                    ->limit(1);
                 },
             ]);
 
