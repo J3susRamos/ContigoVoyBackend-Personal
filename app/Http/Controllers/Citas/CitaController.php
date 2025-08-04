@@ -93,15 +93,9 @@ class CitaController extends Controller
                 $query->where(function ($q) use ($codigo) {
                     // Si el código parece de prepaciente (ajusta la condición según tu lógica)
                     if (str_starts_with($codigo, 'Pre')) {
-                        $q->whereNull('idPaciente')
-                            ->whereHas('paciente', function ($subQ) use ($codigo) {
-                                $subQ->where('nombre', 'like', "%$codigo%");
-                            });
+                        $q->whereNotNull('idPrePaciente');
                     } else {
-                        $q->whereNotNull('idPaciente')
-                            ->whereHas('paciente', function ($subQ) use ($codigo) {
-                                $subQ->where('codigo', 'like', "%$codigo%");
-                            });
+                        $q->whereNotNull('idPaciente');
                     }
                 });
             }
