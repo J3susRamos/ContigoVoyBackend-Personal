@@ -9,20 +9,17 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
         Schema::table('pacientes', function (Blueprint $table) {
-            $table->boolean('activo')->default(true)->after('user_id');
+            $table->unsignedInteger('idPsicologo')->nullable()->change();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::table('pacientes', function (Blueprint $table) {
-            $table->dropColumn('activo');
+            $table->unsignedInteger('idPsicologo')->nullable(false)->change();
         });
     }
 };

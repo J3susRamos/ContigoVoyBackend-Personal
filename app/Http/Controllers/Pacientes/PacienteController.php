@@ -185,14 +185,20 @@ class PacienteController extends Controller
         }
     }
 
-    public function disablePatient(int $id)
+    public function disablePatient(Request $request ,int $id)
     {
         try{
             $paciente = Paciente::findOrFail($id);
             $paciente -> activo = false;
+
+            if (!$request->activo){
+                $paciente->idPsicologo = null;
+            }
+
             $paciente->save();
+
             return HttpResponseHelper::make()
-                ->successfulResponse("Paciente deshabilitado correctamente")
+                ->successfulResponse("Paciente deshabilitado y desvinculado con el psicologo correctamente")
                 ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
@@ -203,15 +209,33 @@ class PacienteController extends Controller
         }
     }
 
-    public function enablePatient(int $id)
+    public function enablePatient(Request $request,int $id)
     {
         try{
+
+            $request->validate([
+                'idPsicologo' => 'required|exists:psicologos,idPsicologo',
+            ]);
+
             $paciente = Paciente::findOrFail($id);
+
+            $psicologo = PSICOLOGO::where('idPsicologo', $request->idPsicologo)
+                ->where('estado', 'A')
+                ->first();
+            
+            if (!$psicologo) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse("El psicólogo no está activo o no existe.")
+                ->send();
+            }
+
             $paciente -> activo = true;
+            $paciente->idPsicologo = $psicologo->idPsicologo;
             $paciente->save();
             return HttpResponseHelper::make()
-                ->successfulResponse("Paciente habilitado correctamente")
+                ->successfulResponse("Paciente habilitado y vinculado con el psicólogo seleccionado.")
                 ->send();
+
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
@@ -246,6 +270,108 @@ class PacienteController extends Controller
                     ->limit(1);
                 },
             ]);
+
+            // Filtrar por género
+            if ($request->filled("genero")) {
+                $generos = explode(",", $request->query("genero"));
+                $query->whereIn("genero", $generos);
+            }
+
+            // Filtrar por edad (espera "10 - 20,30 - 40")
+            if ($request->filled("edad")) {
+                $rangosEdad = explode(",", $request->query("edad"));
+                $query->where(function ($q) use ($rangosEdad) {
+                    foreach ($rangosEdad as $rango) {
+                        [$min, $max] = array_map(
+                            "intval",
+                            explode(" - ", $rango)
+                        );
+                        $q->orWhereBetween("fecha_nacimiento", [
+                            now()->subYears($max)->startOfDay(),
+                            now()->subYears($min)->endOfDay(),
+                        ]);
+                    }
+                });
+            }
+
+            // Filtrar por fecha de la última cita
+            if (
+                $request->filled("fecha_inicio") &&
+                $request->filled("fecha_fin")
+            ) {
+                $fechaInicio = $request->query("fecha_inicio");
+                $fechaFin = $request->query("fecha_fin");
+
+                $query->whereHas("citas", function ($q) use (
+                    $fechaInicio,
+                    $fechaFin
+                ) {
+                    $q->whereBetween("fecha_cita", [$fechaInicio, $fechaFin]);
+                });
+            }
+
+            // Filtrar por nombre
+            if ($request->filled("nombre")) {
+                $nombre = $request->query("nombre");
+                $query->where(function ($q) use ($nombre) {
+                    $q->where("nombre", "like", "%{$nombre}%")->orWhere(
+                        "apellido",
+                        "like",
+                        "%{$nombre}%"
+                    );
+                });
+            }
+
+            if ($shouldPaginate) {
+                $pacientesPaginator = $query->paginate($perPage);
+                $data = $pacientesPaginator
+                    ->getCollection()
+                    ->map(function ($paciente) {
+                        return $this->mapPaciente($paciente);
+                    });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Pacientes obtenidos correctamente", [
+                        "data" => $data,
+                        "pagination" => [
+                            "current_page" => $pacientesPaginator->currentPage(),
+                            "last_page" => $pacientesPaginator->lastPage(),
+                            "per_page" => $pacientesPaginator->perPage(),
+                            "total" => $pacientesPaginator->total(),
+                        ],
+                    ])
+                    ->send();
+            } else {
+                $pacientes = $query->get();
+                $data = $pacientes->map(function ($paciente) {
+                    return $this->mapPaciente($paciente);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse(
+                        "Pacientes obtenidos correctamente",
+                        $data
+                    )
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse(
+                    "Ocurrió un problema al procesar la solicitud. " .
+                        $e->getMessage()
+                )
+                ->send();
+        }
+    }
+
+    public function showEnablePaciente(Request $request)
+    {
+        try {
+
+            $shouldPaginate = $request->query("paginate", false);
+            $perPage = $request->query("per_page", 10);
+
+            $query = Paciente::where("activo", 0);
 
             // Filtrar por género
             if ($request->filled("genero")) {

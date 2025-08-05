@@ -30,6 +30,17 @@ class AuthController extends Controller
                 }
             }
 
+            if ($user->rol === 'PSICOLOGO') {
+
+                $psicologo = Psicologo::where('user_id', $user->user_id)->first();
+
+                if (!$psicologo || $psicologo->estado === 'I') {
+                    Auth::logout();
+                    return response()->json(['error' => 'Psicologo inhabilitado'], 403);
+                }
+                
+            }
+
             if (!$user) {
                 return HttpResponseHelper::make()
                     ->unauthorizedResponse('El correo electrónico no está registrado.');
