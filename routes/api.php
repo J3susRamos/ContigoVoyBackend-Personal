@@ -33,13 +33,18 @@ Route::controller(ContactosController::class)->prefix('contactos')->group(functi
 });
 
 Route::controller(PacienteController::class)->prefix('pacientes')->group(function () {
+    
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+        Route::put('/activar/{id}', 'enablePatient'); // Nueva ruta para activar paciente y vincular con psicologo
+        Route::get('/deshabilitados', 'showEnablePaciente'); // Listar pacientes inactivos para el ADMIN
+    });
+
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::post('/{idCita?}', 'createPaciente');
         Route::get('/{id}', 'showPacienteById');
-        Route::get('/', 'showPacientesByPsicologo');
+        Route::get('/', 'showPacientesByPsicologo'); // Listar pacientes activos por psicólogo
         Route::put('/{id}', 'updatePaciente');
-        Route::put('/desactivar/{id}', 'disablePatient');
-        Route::put('/activar/{id}', 'enablePatient');
+        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
         Route::delete('/{id}', 'destroyPaciente');
         Route::get('/citas/{id}', 'getCitasPaciente');
         Route::get('/estadisticas/genero', 'getPacientesGenero');
@@ -54,8 +59,10 @@ Route::controller(PsicologosController::class)->prefix('psicologos')->group(func
         Route::post('/', 'createPsicologo');
         Route::put('/{id}', 'updatePsicologo');
         Route::delete('/{id}', 'DeletePsicologo');
+        Route::put('/estado/{id}', 'cambiarEstadoPsicologo'); // Cambiar estado del psicólogo A = Activo, I = Inactivo
+        Route::get('/inactivo', 'showInactivePsicologos'); // Nueva ruta para listar psicólogos inactivos
     });
-    Route::get('/', 'showAllPsicologos');
+    Route::get('/', 'showAllPsicologos'); // listar psicologos activos
     Route::get('/{id}', 'showById');
 });
 

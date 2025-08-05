@@ -163,6 +163,78 @@ class PsicologosController extends Controller
         }
     }
 
+    public function showInactivePsicologos(Request $request): JsonResponse
+    {
+        try {
+            $shouldPaginate = $request->query("paginate", false);
+            $perPage = $request->query("per_page", 10);
+
+            $query = Psicologo::with(['especialidades', 'users'])->where('estado', 'I');
+
+            if ($request->filled("pais")) {
+                $paises = explode(",", $request->query("pais"));
+                $query->whereIn("pais", $paises);
+            }
+
+            if ($request->filled("genero")) {
+                $generos = explode(",", $request->query("genero"));
+                $query->whereIn("genero", $generos);
+            }
+
+            if ($request->filled("idioma")) {
+                $idiomas = explode(",", $request->query("idioma"));
+                $query->whereIn("idioma", $idiomas);
+            }
+
+            if ($request->filled("enfoque")) {
+                $enfoques = explode(",", $request->query("enfoque"));
+                $query->whereHas("especialidades", function ($q) use ($enfoques) {
+                    $q->whereIn("nombre", $enfoques);
+                });
+            }
+
+            if ($request->filled("search")) {
+                $search = $request->query("search");
+                $query->whereHas("users", function ($q) use ($search) {
+                    $q->where("name", "like", "%{$search}%")
+                        ->orWhere("apellido", "like", "%{$search}%");
+                });
+            }
+
+            if ($shouldPaginate) {
+                $paginator = $query->paginate($perPage);
+                $data = collect($paginator->items())->map(function ($psicologo) {
+                    return $this->mapPsicologo($psicologo);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Psicólogos obtenidos correctamente", [
+                        "data" => $data,
+                        "pagination" => [
+                            "current_page" => $paginator->currentPage(),
+                            "last_page" => $paginator->lastPage(),
+                            "per_page" => $paginator->perPage(),
+                            "total" => $paginator->total(),
+                        ],
+                    ])
+                    ->send();
+            } else {
+                $psicologos = $query->get();
+                $data = $psicologos->map(function ($psicologo) {
+                    return $this->mapPsicologo($psicologo);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Psicólogos obtenidos correctamente", $data)
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
+                ->send();
+        }
+    }
+
     private function mapPsicologo($psicologo): array
     {
         return [
