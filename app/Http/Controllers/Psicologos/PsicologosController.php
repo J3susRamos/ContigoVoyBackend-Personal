@@ -269,7 +269,12 @@ class PsicologosController extends Controller
             ]);
             $psicologo->update($psicologoData);
 
-            $usuarioData = $requestUser->only(['name', 'apellido', 'email', 'password', 'fecha_nacimiento', 'imagen']);
+
+
+            $usuarioData = $requestUser->only(['apellido', 'email', 'password', 'fecha_nacimiento', 'imagen']);
+            if ($requestUser->filled('nombre')) {
+                $usuarioData['name'] = $requestUser->input('nombre');
+            }
             if ($requestUser->filled('password')) {
                 $usuarioData['password'] = Hash::make($requestUser->password);
             }
