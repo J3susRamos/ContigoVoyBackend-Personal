@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\CredencialesPacienteMail;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\Drivers\Gd\Driver;
+use Illuminate\Support\Facades\Storage;
 
 class PacienteController extends Controller
 {
@@ -42,6 +46,18 @@ class PacienteController extends Controller
             if (PACIENTE::where('email', $requestPaciente->email)->exists()){
                 return response()->json(['message' => "El email ya esta registrado"], 400);
             }
+
+            $imagen = $requestPaciente->file('imagen');
+            $nombreImagen = 'paciente_' . Str::uuid() . '.webp';
+            $rutaCarpeta = 'paciente';
+
+            $imageManager = new ImageManager(Driver::class);
+            $imageWebp = $imageManager
+                ->read($imagen->getRealPath())
+                ->encode(new WebpEncoder(quality: 90));
+            Storage::disk('public')->put("$rutaCarpeta/$nombreImagen", $imageWebp);
+
+            $ruta = "$rutaCarpeta/$nombreImagen";
 
             $data = $requestPaciente->validated();
 
@@ -70,11 +86,14 @@ class PacienteController extends Controller
             $paciente->celular = $data["celular"];
             $paciente->direccion = $data["direccion"];
             $paciente->departamento = $data["departamento"];
+            $paciente->imagen = $ruta;
             $paciente->pais = $data["pais"];
             $paciente->idPsicologo = $psicologo->idPsicologo;
             $paciente->codigo = Paciente::generatePacienteCode();
             $paciente->user_id = $user->user_id;
             $paciente->save();
+
+            $user->assignRole('PACIENTE');
 
             Mail::to($user->email)->send(new CredencialesPacienteMail(
                 $user->name,
