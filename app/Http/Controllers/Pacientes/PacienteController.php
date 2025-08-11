@@ -46,19 +46,7 @@ class PacienteController extends Controller
             if (PACIENTE::where('email', $requestPaciente->email)->exists()){
                 return response()->json(['message' => "El email ya esta registrado"], 400);
             }
-
-            $imagen = $requestPaciente->file('imagen');
-            $nombreImagen = 'paciente_' . Str::uuid() . '.webp';
-            $rutaCarpeta = 'paciente';
-
-            $imageManager = new ImageManager(Driver::class);
-            $imageWebp = $imageManager
-                ->read($imagen->getRealPath())
-                ->encode(new WebpEncoder(quality: 90));
-            Storage::disk('public')->put("$rutaCarpeta/$nombreImagen", $imageWebp);
-
-            $ruta = "$rutaCarpeta/$nombreImagen";
-
+        
             $data = $requestPaciente->validated();
 
             $randomPassword = Str::random(8);
@@ -86,7 +74,7 @@ class PacienteController extends Controller
             $paciente->celular = $data["celular"];
             $paciente->direccion = $data["direccion"];
             $paciente->departamento = $data["departamento"];
-            $paciente->imagen = $ruta;
+            $paciente->imagen = $data["imagen"] ?? null;
             $paciente->pais = $data["pais"];
             $paciente->idPsicologo = $psicologo->idPsicologo;
             $paciente->codigo = Paciente::generatePacienteCode();
