@@ -122,7 +122,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::delete('/{id}', 'destroyCita');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
-        Route::post('/habilitar-cita', 'habilitarCita');
+        Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
     });
 });
 
@@ -205,7 +205,8 @@ Route::prefix('whatsapp')->group(function () {
 Route::controller(BoucherController::class)->prefix('boucher')->group(function(){
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
         Route::post('/enviar', 'enviarBoucher');
-        Route::get('/listar', 'getBouchers');
-        Route::get('/sin-pagar', 'sinPagar');
+        Route::get('/pendientes', 'getBouchers');
+        Route::get('/citas-sin-pagar', 'sinPagar');
+        Route::get('/todas','todasPendientes');
     });
 });
