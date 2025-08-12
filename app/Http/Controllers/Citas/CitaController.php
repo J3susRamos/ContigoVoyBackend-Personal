@@ -12,6 +12,7 @@ use App\Models\Psicologo;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Boucher;
 
 class CitaController extends Controller
 {
@@ -71,21 +72,46 @@ class CitaController extends Controller
         }
     }
 
-    public function habilitarCita(Request $request) //CAMBIAR CONTROLADOR
+    public function aceptarBoucher(Request $request)
     {
         try {
-            $user = Auth::user();
+
+            $userId = Auth::id();
+
+            $codigo = $request->input('codigo');
+
+            if (!$codigo) {
+                return response()->json([
+                    'status_code' => 500,
+                    'status_message' => 'Internal serve',
+                    'description' => 'Error al recibir el codigo del boucher',
+                ], 500);
+            }
+
+            $boucher = Boucher::where('codigo', $codigo)
+                ->where('estado', 'pendiente')
+                ->first();
+
+            if (!$boucher) {
+                return response()->json([
+                    'status_code' => 500,
+                    'status_message' => 'Internal server',
+                    'description' => 'El estado del bouchcer debe ser pendiente',
+                    'message' => null
+                ], 500);
+            }
+
+            $boucher->estado = 'aceptado';
+            $boucher->save();
 
             $idCita = $request->input('idCita');
 
             if (!$idCita) {
                 return response()->json([
-                    'status_code' => 400,
-                    'status_message' => 'Bad Request',
-                    'description' => 'Debe proporcionar el id de la cita.',
-                    'result' => null,
-                    'errorBag' => []
-                ], 400);
+                    'status_code' => 500,
+                    'status_message' => 'Internal serve',
+                    'description' => 'Error al recibir la cita',
+                ], 500);
             }
 
             $cita = Cita::where('idCita', $idCita)
@@ -94,12 +120,10 @@ class CitaController extends Controller
 
             if (!$cita) {
                 return response()->json([
-                    'status_code' => 404,
-                    'status_message' => 'Not Found',
-                    'description' => 'La cita no existe o no está en estado "Sin pagar".',
-                    'result' => null,
-                    'errorBag' => []
-                ], 404);
+                    'status_code' => 500,
+                    'status_message' => 'Internal server',
+                    'description' => 'Error en el estado de la cita'
+                ], 500);
             }
 
             $cita->estado_Cita = 'Pendiente';
@@ -107,27 +131,27 @@ class CitaController extends Controller
 
             $roomName = 'consulta_' . uniqid();
             $jitsiUrl = "https://meet.jit.si/{$roomName}";
+            $cita->jitsi_url = $jitsiUrl;
+            $cita->save();
 
             $result = [
                 'idCita' => $cita->idCita,
                 'estado_Cita' => $cita->estado_Cita,
-                'jitsi_url' => $jitsiUrl,
+                'jitsi_url' => $cita->jitsi_url,
             ];
 
             return response()->json([
                 'status_code' => 200,
                 'status_message' => 'OK',
-                'description' => 'Cita habilitada correctamente.',
+                'description' => 'Cita y boucher habilitada correctamente.',
                 'result' => $result,
                 'errorBag' => []
             ], 200);
-        } catch (\Exception $e) {
+
+        } catch (Exception $e) {
             return response()->json([
-                'status_code' => 500,
-                'status_message' => 'Internal Server Error',
-                'description' => 'Error al habilitar la cita: ' . $e->getMessage(),
-                'result' => null,
-                'errorBag' => []
+                'message' => 'Error al aceptar el boucher.',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

@@ -119,7 +119,8 @@ class BoucherController extends Controller
         }
     }
 
-    public function sinPagar(){
+    public function sinPagar()
+    {
         try {
             $userId = Auth::id();
 
@@ -144,4 +145,30 @@ class BoucherController extends Controller
         }
     }
 
+    public function todasPendientes()
+    {
+        try {
+
+            $userID = Auth::id();
+
+            $bouchers = Boucher::where('estado', 'pendiente')
+                ->get();
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Bouchers pendientes obtenidos correctamente.',
+                'result' => $bouchers,
+                'errorBag' => []
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal server',
+                'description' => 'Error al obtener los bouchers pendientes.',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
