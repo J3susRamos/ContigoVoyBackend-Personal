@@ -53,7 +53,8 @@ class PostPaciente extends FormRequest
             "direccion" => "required|string|max:250",
             "pais" => "required|string|max:100",
             "departamento" => "required|string|max:100",
-            'password' => 'string|min:8'
+            'password' => 'string|min:8',
+            'imagen' => 'nullable|string|regex:/^data:image\/[a-zA-Z]+;base64,/'
         ];
     }
 
@@ -110,6 +111,9 @@ class PostPaciente extends FormRequest
             'departamento.required' => 'El departamento es obligatorio.',
             'departamento.string' => 'El departamento debe ser una cadena de texto.',
             'departamento.max' => 'El departamento no debe superar los 100 caracteres.',
+
+            'imagen.string' => 'La imagen debe ser una cadena de texto en formato base64.',
+            'imagen.regex' => 'El formato de la imagen no es válido. Debe ser una imagen en base64.',
         ];
     }
 }

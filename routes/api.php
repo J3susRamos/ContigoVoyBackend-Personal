@@ -18,7 +18,7 @@ use App\Http\Controllers\RegistroFamiliar\RegistroFamiliarController;
 use App\Http\Controllers\Estadisticas\EstadisticasController;
 use App\Http\Controllers\Marketing\MarketingController;
 use App\Http\Controllers\WhatsAppController;
-
+use App\Http\Controllers\Boucher\BoucherController;
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
     Route::post('/login', 'login')->name('login');
@@ -108,6 +108,7 @@ Route::controller(CategoriaController::class)->prefix('categorias')->group(funct
 });
 
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
+    Route::get('/sin-pagar','listunpaid'); // Nueva ruta para listar citas sin pagar
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
@@ -119,6 +120,9 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
         Route::delete('/{id}', 'destroyCita');
+    });
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+        Route::post('/habilitar-cita', 'habilitarCita');
     });
 });
 
@@ -198,3 +202,10 @@ Route::prefix('whatsapp')->group(function () {
     Route::get('status', [WhatsAppController::class, 'status']);
 });
 
+Route::controller(BoucherController::class)->prefix('boucher')->group(function(){
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
+        Route::post('/enviar', 'enviarBoucher');
+        Route::get('/listar', 'getBouchers');
+        Route::get('/sin-pagar', 'sinPagar');
+    });
+});

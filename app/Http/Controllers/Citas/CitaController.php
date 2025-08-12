@@ -25,15 +25,110 @@ class CitaController extends Controller
             $data = $request->validated();
             $data['idPsicologo'] = $psicologo->idPsicologo;
 
+            if (!isset($data['estado_Cita']) || $data['estado_Cita'] !== 'Sin pagar') {
+                return response()->json([
+                    'status_code' => 400,
+                    'status_message' => 'Bad Request',
+                    'description' => 'El estado de la cita debe ser "Sin pagar".',
+                    'result' => null,
+                    'errorBag' => ['estado_Cita' => ['El estado de la cita debe ser "Sin pagar".']],
+                ], 400);
+            }
+
             $cita = Cita::create($data);
 
             return HttpResponseHelper::make()
-                ->successfulResponse('Cita creada correctamente')
+                ->successfulResponse('Cita creada correctamente', ['data' => $cita])
                 ->send();
         } catch (Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al crear la cita: ' . $e->getMessage())
                 ->send();
+        }
+    }
+
+    public function listunpaid(Request $request)
+    {
+        try {
+
+            $citas = Cita::where('estado_Cita', 'Sin pagar')->get();
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Lista de citas sin pagar obtenida correctamente.',
+                'result' => $citas,
+                'errorBag' => []
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al obtener la lista de citas sin pagar: ' . $e->getMessage(),
+                'result' => null,
+                'errorBag' => []
+            ], 500);
+        }
+    }
+
+    public function habilitarCita(Request $request) //CAMBIAR CONTROLADOR
+    {
+        try {
+            $user = Auth::user();
+
+            $idCita = $request->input('idCita');
+
+            if (!$idCita) {
+                return response()->json([
+                    'status_code' => 400,
+                    'status_message' => 'Bad Request',
+                    'description' => 'Debe proporcionar el id de la cita.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 400);
+            }
+
+            $cita = Cita::where('idCita', $idCita)
+                ->where('estado_Cita', 'Sin pagar')
+                ->first();
+
+            if (!$cita) {
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'La cita no existe o no está en estado "Sin pagar".',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            $cita->estado_Cita = 'Pendiente';
+            $cita->save();
+
+            $roomName = 'consulta_' . uniqid();
+            $jitsiUrl = "https://meet.jit.si/{$roomName}";
+
+            $result = [
+                'idCita' => $cita->idCita,
+                'estado_Cita' => $cita->estado_Cita,
+                'jitsi_url' => $jitsiUrl,
+            ];
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Cita habilitada correctamente.',
+                'result' => $result,
+                'errorBag' => []
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al habilitar la cita: ' . $e->getMessage(),
+                'result' => null,
+                'errorBag' => []
+            ], 500);
         }
     }
 
@@ -299,26 +394,26 @@ class CitaController extends Controller
 
     //Consulta para las citas del psicologo (total por fechas)
     public function getCitasPorPeriodoPsicologo()
-{
-    $userId = Auth::id();
-    $psicologo = Psicologo::where('user_id', $userId)->first();
+    {
+        $userId = Auth::id();
+        $psicologo = Psicologo::where('user_id', $userId)->first();
 
-    if (!$psicologo) {
-        return HttpResponseHelper::make()
-            ->notFoundResponse('No se encontró un psicólogo asociado a este usuario.')
-            ->send();
+        if (!$psicologo) {
+            return HttpResponseHelper::make()
+                ->notFoundResponse('No se encontró un psicólogo asociado a este usuario.')
+                ->send();
+        }
+
+        $idPsicologo = $psicologo->idPsicologo;
+
+        $citas = Cita::selectRaw('DATE(fecha_cita) as fecha, COUNT(*) as total')
+            ->where('idPsicologo', $idPsicologo)
+            ->groupBy('fecha_cita')
+            ->orderBy('fecha_cita', 'asc')
+            ->get();
+
+        return response()->json($citas);
     }
-
-    $idPsicologo = $psicologo->idPsicologo;
-
-    $citas = Cita::selectRaw('DATE(fecha_cita) as fecha, COUNT(*) as total')
-        ->where('idPsicologo', $idPsicologo)
-        ->groupBy('fecha_cita')
-        ->orderBy('fecha_cita', 'asc')
-        ->get();
-
-    return response()->json($citas);
-}
 
     //Nueva consulta de dashboard del psicólogo
 
