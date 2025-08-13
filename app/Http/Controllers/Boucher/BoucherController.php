@@ -11,11 +11,6 @@ use Carbon\Carbon;
 use Error;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Encoders\WebpEncoder;
-use Intervention\Image\Drivers\Gd\Driver;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Paciente;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +22,7 @@ class BoucherController extends Controller
     {
         $request->validate([
             'idCita' => 'required|exists:citas,idCita',
-            'imagen' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'imagen' => ['required','string','regex:/^data:image\/webp;base64,/'],
         ]);
 
         try {
@@ -56,25 +51,12 @@ class BoucherController extends Controller
                 return response()->json(['message' => 'Ya has enviado un boucher para esta cita.'], 409);
             }
 
-            $imagen = $request->file('imagen');
-            $nombreImagen = 'boucher_' . Str::uuid() . '.webp';
-            $rutaCarpeta = 'bouchers';
-
-
-            $imageManager = new ImageManager(Driver::class);
-            $imageWebp = $imageManager
-                ->read($imagen->getRealPath())
-                ->encode(new WebpEncoder(quality: 90));
-            Storage::disk('public')->put("$rutaCarpeta/$nombreImagen", $imageWebp);
-
-            $ruta = "$rutaCarpeta/$nombreImagen";
-
             $boucher = Boucher::create([
                 'codigo' => Boucher::generateBoucherCode(),
                 'idCita' => $cita->idCita,
                 'fecha' => Carbon::now()->toDateString(),
                 'estado' => 'pendiente',
-                'imagen' => $ruta,
+                'imagen' => $request->imagen,
             ]);
 
             return response()->json([
@@ -161,7 +143,6 @@ class BoucherController extends Controller
                 'result' => $bouchers,
                 'errorBag' => []
             ], 200);
-
         } catch (Exception $e) {
             return response()->json([
                 'status_code' => 500,
