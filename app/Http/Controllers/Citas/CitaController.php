@@ -161,7 +161,7 @@ class CitaController extends Controller
             $userId = Auth::id();
             $psicologo = Psicologo::where('user_id', $userId)->first();
 
-            if(!$psicologo) {
+            if (!$psicologo) {
                 return response()->json([
                     'status_code' => 404,
                     'status_message' => 'Not Found',
@@ -181,11 +181,11 @@ class CitaController extends Controller
                 ], 500);
             }
 
-            $cita = Cita::where('idCita',$idCita)
-                ->where ('estado_Cita','Pendiente')
+            $cita = Cita::where('idCita', $idCita)
+                ->where('estado_Cita', 'Pendiente')
                 ->first();
 
-            if(!$cita){
+            if (!$cita) {
                 return response()->json([
                     'status_code' => 500,
                     'status_message' => 'Internal serve',
@@ -193,8 +193,8 @@ class CitaController extends Controller
                 ], 500);
             }
 
-            $cita->estado_Cita='Realizado';
-            $cita->jitsi_url=Null;
+            $cita->estado_Cita = 'Realizado';
+            $cita->jitsi_url = Null;
             $cita->save();
 
             $result = [
@@ -202,12 +202,11 @@ class CitaController extends Controller
             ];
 
             return response()->json([
-                'status_code'=>200,
-                'status_message'=>'Estado cambiado correctamente',
-                'description'=>'Videollamada eliminada corrrectamente',
-                'result'=>$result
-            ],200);
-
+                'status_code' => 200,
+                'status_message' => 'Estado cambiado correctamente',
+                'description' => 'Videollamada eliminada corrrectamente',
+                'result' => $result
+            ], 200);
         } catch (Exception $e) {
             return response()->json([
                 'status_code' => 500,
@@ -215,6 +214,49 @@ class CitaController extends Controller
                 'description' => 'Error al marcar la cita como realizada: ' . $e->getMessage(),
                 'result' => null,
                 'errorBag' => []
+            ], 500);
+        }
+    }
+
+    public function listarCitasPaciente()
+    {
+        try {
+            $userId = Auth::id();
+
+            // Buscar paciente por el user_id
+            $paciente = Paciente::where('user_id', $userId)->first();
+
+            if (!$paciente) {
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'Paciente no encontrado.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            // Buscar citas del paciente (solo pendientes y con jitsi_url no nulo)
+            $citas = Cita::where('idPaciente', $paciente->idPaciente)
+                ->where('estado_Cita', 'Pendiente')
+                ->whereNotNull('jitsi_url')
+                ->select('idCita', 'fecha_cita', 'hora_cita', 'jitsi_url', 'estado_Cita')
+                ->get();
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Citas del paciente obtenidas correctamente.',
+                'result' => $citas,
+                'errorBag' => []
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al listar las citas del paciente.',
+                'result' => null,
+                'errorBag' => ['exception' => $e->getMessage()]
             ], 500);
         }
     }

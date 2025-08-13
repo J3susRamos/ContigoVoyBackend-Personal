@@ -112,6 +112,9 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
+        Route::get('/enlaces','listarCitasPaciente');
+    });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
         Route::get('/dashboard/psicologo', 'psicologoDashboard');
