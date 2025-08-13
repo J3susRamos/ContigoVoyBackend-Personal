@@ -147,11 +147,74 @@ class CitaController extends Controller
                 'result' => $result,
                 'errorBag' => []
             ], 200);
-
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al aceptar el boucher.',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function citaRealizada(Request $request)
+    {
+        try {
+            $userId = Auth::id();
+            $psicologo = Psicologo::where('user_id', $userId)->first();
+
+            if(!$psicologo) {
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'Psicólogo no encontrado.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            $idCita = $request->input('idCita');
+
+            if (!$idCita) {
+                return response()->json([
+                    'status_code' => 500,
+                    'status_message' => 'Internal serve',
+                    'description' => 'Error al recibir la cita',
+                ], 500);
+            }
+
+            $cita = Cita::where('idCita',$idCita)
+                ->where ('estado_Cita','Pendiente')
+                ->first();
+
+            if(!$cita){
+                return response()->json([
+                    'status_code' => 500,
+                    'status_message' => 'Internal serve',
+                    'description' => 'Error al recibir la cita',
+                ], 500);
+            }
+
+            $cita->estado_Cita='Realizado';
+            $cita->jitsi_url=Null;
+            $cita->save();
+
+            $result = [
+                'estado_Cita' => $cita->estado_Cita,
+            ];
+
+            return response()->json([
+                'status_code'=>200,
+                'status_message'=>'Estado cambiado correctamente',
+                'description'=>'Videollamada eliminada corrrectamente',
+                'result'=>$result
+            ],200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al marcar la cita como realizada: ' . $e->getMessage(),
+                'result' => null,
+                'errorBag' => []
             ], 500);
         }
     }

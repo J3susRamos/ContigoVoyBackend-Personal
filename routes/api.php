@@ -120,6 +120,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
         Route::delete('/{id}', 'destroyCita');
+        Route::post('/realizada','citaRealizada');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
