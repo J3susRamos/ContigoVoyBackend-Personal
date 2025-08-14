@@ -297,6 +297,11 @@ class CitaController extends Controller
                 $query->whereIn('estado_Cita', $estados);
             }
 
+            if ($request->filled('jitsi_url')) {
+                $jitsi_url = explode(',', $request->query('jitsi_url'));
+                $query->whereIn('jitsi_url', $jitsi_url);
+            }
+
             if ($request->filled('edad')) {
                 $rangos = explode(',', $request->query('edad'));
                 $query->whereHas('paciente', function ($q) use ($rangos) {
@@ -395,7 +400,8 @@ class CitaController extends Controller
                 ? Carbon::parse($cita->paciente->fecha_nacimiento)->age
                 : null,
             'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
-            'duracion' => "{$cita->duracion} min."
+            'duracion' => "{$cita->duracion} min.",
+            'jitsi_url' => "{$cita->jitsi_url}"
         ];
     }
 

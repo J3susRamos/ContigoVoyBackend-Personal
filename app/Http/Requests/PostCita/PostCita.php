@@ -36,6 +36,7 @@ class PostCita extends FormRequest
             'estado_Cita' => 'sometimes|in:Pendiente,Confirmada,Cancelada,Sin pagar,Reprogramada,Realizada',
             'colores' => 'nullable|string',
             'duracion' => 'nullable|integer|min:0',
+            'jitsi_url' => 'nullable|string',
 
 
             'fecha_cita' => [

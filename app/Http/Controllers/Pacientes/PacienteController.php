@@ -138,10 +138,20 @@ class PacienteController extends Controller
                 ->where("estado_Cita", "Confirmada")
                 ->count();
 
+            $citasRealizadas = Cita::where("idPaciente", $idPaciente)
+                ->where("estado_Cita", "Realizada")
+                ->count();
+
+            $citasSinPagar = Cita::where("idPaciente", $idPaciente)
+                ->where("estado_Cita", "Sin Pagar")
+                ->count();
+
             $response = [
                 "pendientes" => $citasPendientes,
                 "canceladas" => $citasCanceladas,
                 "confirmadas" => $citasConfirmadas,
+                "realizadas" => $citasRealizadas,
+                "sin pagar" => $citasSinPagar
             ];
 
             return HttpResponseHelper::make()

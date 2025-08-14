@@ -37,6 +37,7 @@ class Cita extends Model
         "duracion",
         "fecha_cita",
         "hora_cita",
+        "jitsi_url",
     ];
 
     public function etiqueta(): BelongsTo
