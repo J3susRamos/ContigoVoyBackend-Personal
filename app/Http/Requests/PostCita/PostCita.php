@@ -33,9 +33,10 @@ class PostCita extends FormRequest
             'duracion' => 'required|integer',
             'hora_cita' => 'required|date_format:H:i:s',
             'motivo_Consulta' => 'nullable|string',
-            'estado_Cita' => 'sometimes|in:Pendiente,Confirmada,Cancelada,Sin pagar,Reprogramada',
+            'estado_Cita' => 'sometimes|in:Pendiente,Confirmada,Cancelada,Sin pagar,Reprogramada,Realizada',
             'colores' => 'nullable|string',
             'duracion' => 'nullable|integer|min:0',
+            'jitsi_url' => 'nullable|string',
 
 
             'fecha_cita' => [

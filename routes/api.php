@@ -112,6 +112,10 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
+    Route::post('/cancelar-sin-pago','cancelarCitasNoPagadas');
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
+        Route::get('/enlaces','listarCitasPaciente');
+    });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
         Route::get('/dashboard/psicologo', 'psicologoDashboard');
@@ -120,6 +124,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
         Route::delete('/{id}', 'destroyCita');
+        Route::post('/realizada','citaRealizada');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
@@ -205,7 +210,7 @@ Route::prefix('whatsapp')->group(function () {
 Route::controller(BoucherController::class)->prefix('boucher')->group(function(){
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
         Route::post('/enviar', 'enviarBoucher');
-        Route::get('/pendientes', 'getBouchers');
+        Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente
         Route::get('/citas-sin-pagar', 'sinPagar');
         Route::get('/todas','todasPendientes');
     });
