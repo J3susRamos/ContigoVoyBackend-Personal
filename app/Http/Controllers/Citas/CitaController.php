@@ -218,12 +218,11 @@ class CitaController extends Controller
         }
     }
 
-    public function listarCitasPaciente()
+    public function listarCitasPaciente(Request $request)
     {
         try {
             $userId = Auth::id();
 
-            // Buscar paciente por el user_id
             $paciente = Paciente::where('user_id', $userId)->first();
 
             if (!$paciente) {
@@ -236,18 +235,27 @@ class CitaController extends Controller
                 ], 404);
             }
 
-            // Buscar citas del paciente (solo pendientes y con jitsi_url no nulo)
-            $citas = Cita::where('idPaciente', $paciente->idPaciente)
-                ->where('estado_Cita', 'Pendiente')
-                ->whereNotNull('jitsi_url')
-                ->select('idCita', 'fecha_cita', 'hora_cita', 'jitsi_url', 'estado_Cita')
-                ->get();
+            $estadoCita = $request->query('estado_Cita');
+            $estadoBoucher = $request->query('estado_boucher');
+
+            $citas = Boucher::with('cita')
+                ->when($estadoBoucher, function ($query) use ($estadoBoucher) {
+                    $query->where('estado', $estadoBoucher);
+                })
+                ->whereHas('cita', function ($query) use ($paciente, $estadoCita) {
+                    $query->where('idPaciente', $paciente->idPaciente);
+
+                    if ($estadoCita) {
+                        $query->where('estado_Cita', $estadoCita);
+                    }
+                })
+                ->paginate(10);
 
             return response()->json([
                 'status_code' => 200,
                 'status_message' => 'OK',
                 'description' => 'Citas del paciente obtenidas correctamente.',
-                'result' => $citas,
+                'citas' => $citas,
                 'errorBag' => []
             ], 200);
         } catch (Exception $e) {

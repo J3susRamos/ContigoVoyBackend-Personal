@@ -112,6 +112,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
+    Route::post('/cancelar-sin-pago','cancelarCitasNoPagadas');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
         Route::get('/enlaces','listarCitasPaciente');
     });
@@ -209,7 +210,7 @@ Route::prefix('whatsapp')->group(function () {
 Route::controller(BoucherController::class)->prefix('boucher')->group(function(){
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
         Route::post('/enviar', 'enviarBoucher');
-        Route::get('/pendientes', 'getBouchers');
+        Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente
         Route::get('/citas-sin-pagar', 'sinPagar');
         Route::get('/todas','todasPendientes');
     });

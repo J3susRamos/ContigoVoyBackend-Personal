@@ -88,7 +88,7 @@ class BoucherController extends Controller
                 ->join('citas', 'boucher.idCita', '=', 'citas.idCita')
                 ->where('citas.idPaciente', $paciente->idPaciente)
                 ->select('boucher.*')
-                ->get();
+                ->paginate(10);
 
             Log::info('Bouchers con join: ' . count($bouchers));
 
