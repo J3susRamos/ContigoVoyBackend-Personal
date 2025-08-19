@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PostPaciente\PostPaciente;
 use App\Http\Requests\PostUser\PostUser;
-use App\Models\User;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Psicologo;
@@ -18,10 +17,11 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\CredencialesPacienteMail;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Encoders\WebpEncoder;
-use Intervention\Image\Drivers\Gd\Driver;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+use App\Mail\CodigoRecuperacion;
+use App\Mail\NuevaContrasenaGenerada;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class PacienteController extends Controller
 {
@@ -39,14 +39,14 @@ class PacienteController extends Controller
                     ->send();
             }
 
-            if (PACIENTE::where('DNI',$requestPaciente->DNI)->exists()){
+            if (PACIENTE::where('DNI', $requestPaciente->DNI)->exists()) {
                 return response()->json(['message' => "El DNI ya esta registrado"], 400);
             }
 
-            if (PACIENTE::where('email', $requestPaciente->email)->exists()){
+            if (PACIENTE::where('email', $requestPaciente->email)->exists()) {
                 return response()->json(['message' => "El email ya esta registrado"], 400);
             }
-        
+
             $data = $requestPaciente->validated();
 
             $randomPassword = Str::random(8);
@@ -92,7 +92,6 @@ class PacienteController extends Controller
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente creado correctamente")
                 ->send();
-
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse("Ocurrió un problema al procesar la solicitud. " . $e->getMessage())
@@ -202,13 +201,13 @@ class PacienteController extends Controller
         }
     }
 
-    public function disablePatient(Request $request ,int $id)
+    public function disablePatient(Request $request, int $id)
     {
-        try{
+        try {
             $paciente = Paciente::findOrFail($id);
-            $paciente -> activo = false;
+            $paciente->activo = false;
 
-            if (!$request->activo){
+            if (!$request->activo) {
                 $paciente->idPsicologo = null;
             }
 
@@ -226,9 +225,9 @@ class PacienteController extends Controller
         }
     }
 
-    public function enablePatient(Request $request,int $id)
+    public function enablePatient(Request $request, int $id)
     {
-        try{
+        try {
 
             $request->validate([
                 'idPsicologo' => 'required|exists:psicologos,idPsicologo',
@@ -239,20 +238,19 @@ class PacienteController extends Controller
             $psicologo = PSICOLOGO::where('idPsicologo', $request->idPsicologo)
                 ->where('estado', 'A')
                 ->first();
-            
+
             if (!$psicologo) {
-            return HttpResponseHelper::make()
-                ->internalErrorResponse("El psicólogo no está activo o no existe.")
-                ->send();
+                return HttpResponseHelper::make()
+                    ->internalErrorResponse("El psicólogo no está activo o no existe.")
+                    ->send();
             }
 
-            $paciente -> activo = true;
+            $paciente->activo = true;
             $paciente->idPsicologo = $psicologo->idPsicologo;
             $paciente->save();
             return HttpResponseHelper::make()
                 ->successfulResponse("Paciente habilitado y vinculado con el psicólogo seleccionado.")
                 ->send();
-
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
@@ -260,6 +258,64 @@ class PacienteController extends Controller
                 )
                 ->send();
         }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $paciente = Paciente::where('email', $request->email)->first();
+
+        if (!$paciente) {
+            return response()->json(['message' => 'Paciente no encontrado.'], 404);
+        }
+
+        $codigo = rand(10000, 99999);
+
+        $cacheKey = 'codigo_reset_' . $paciente->email;
+
+        Cache::put($cacheKey, $codigo, now()->addMinutes(10));
+
+        Mail::to($paciente->email)->send(new CodigoRecuperacion($codigo));
+
+        return response()->json(['message' => 'Código enviado al correo.']);
+    }
+
+    public function verificarCodigo(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string'
+        ]);
+
+        $cacheKey = 'codigo_reset_' . $request->email;
+        $codigoGuardado = Cache::get($cacheKey);
+
+        if (!$codigoGuardado || $codigoGuardado != $request->code) {
+            Log::warning('Código de verificación inválido o expirado.', [
+                'email' => $request->email,
+                'codigo_enviado' => $codigoGuardado,
+                'codigo_recibido' => $request->code,
+                'cache_existe' => Cache::has($cacheKey),
+            ]);
+
+            return response()->json(['message' => 'Código inválido o expirado.'], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'Paciente no encontrado.'], 404);
+        }
+
+        $nuevaContrasena = Str::random(8);
+        $user->password = Hash::make($nuevaContrasena);
+        $user->save();
+
+        Cache::forget($cacheKey);
+
+        Mail::to($user->email)->send(new NuevaContrasenaGenerada($nuevaContrasena));
+
+        return response()->json(['message' => 'Nueva contraseña enviada al correo.']);
     }
 
     public function showPacientesByPsicologo(Request $request)
@@ -281,12 +337,12 @@ class PacienteController extends Controller
                 ->where("activo", 1)
                 ->with([
                     "citas" => function ($query) {
-                $query
-                    ->orderBy("fecha_cita", "desc")
-                    ->orderBy("hora_cita", "desc")
-                    ->limit(1);
-                },
-            ]);
+                        $query
+                            ->orderBy("fecha_cita", "desc")
+                            ->orderBy("hora_cita", "desc")
+                            ->limit(1);
+                    },
+                ]);
 
             // Filtrar por género
             if ($request->filled("genero")) {

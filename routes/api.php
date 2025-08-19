@@ -19,6 +19,7 @@ use App\Http\Controllers\Estadisticas\EstadisticasController;
 use App\Http\Controllers\Marketing\MarketingController;
 use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\Boucher\BoucherController;
+use App\Http\Controllers\Disponibilidad\DisponibilidadController;
 
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
     Route::post('/login', 'login')->name('login');
@@ -34,6 +35,9 @@ Route::controller(ContactosController::class)->prefix('contactos')->group(functi
 });
 
 Route::controller(PacienteController::class)->prefix('pacientes')->group(function () {
+
+    Route::post('/enviar-codigo','resetPassword');
+    Route::post('/verificar-codigo','verificarCodigo');
 
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::put('/activar/{id}', 'enablePatient'); // Nueva ruta para activar paciente y vincular con psicologo
@@ -213,5 +217,11 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function()
         Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente
         Route::get('/citas-sin-pagar', 'sinPagar');
         Route::get('/todas','todasPendientes');
+    });
+});
+
+Route::controller(DisponibilidadController::class)->prefix('disponibilidad')->group(function(){
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
+        Route::post('/crear', 'crearDisponibilidad');
     });
 });
