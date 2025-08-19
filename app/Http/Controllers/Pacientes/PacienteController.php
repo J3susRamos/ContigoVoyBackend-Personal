@@ -578,54 +578,55 @@ class PacienteController extends Controller
     }
 
     public function getPacientesGenero()
-    {
-        try {
-            $userId = Auth::id();
-            $psicologo = Psicologo::where("user_id", $userId)->first();
+{
+    try {
+        $userId = Auth::id();
+        $psicologo = Psicologo::where("user_id", $userId)->first();
 
-            if (!$psicologo) {
-                return HttpResponseHelper::make()
-                    ->unauthorizedResponse("No se tiene acceso como psicólogo.")
-                    ->send();
-            }
-
-            // Obtener el conteo de pacientes por género
-            $pacientes = Paciente::where(
-                "idPsicologo",
-                $psicologo->idPsicologo
-            )->get();
-            $total = $pacientes->count();
-            if ($total === 0) {
-                return HttpResponseHelper::make()
-                    ->successfulResponse("No hay pacientes registrados.", [])
-                    ->send();
-            }
-            $estadisticas = $pacientes
-                ->groupBy(function ($paciente) {
-                    return $paciente->genero ?: "Desconocido"; // Agrupar por género, o 'Desconocido' si no se especifica
-                })
-                ->map(function ($items) use ($total) {
-                    return [
-                        "cantidad" => $items->count(),
-                        "porcentaje" => round(($items->count() / $total) * 100),
-                    ];
-                });
-
+        if (!$psicologo) {
             return HttpResponseHelper::make()
-                ->successfulResponse(
-                    "Porcentaje de pacientes por genero obtenido correctamente",
-                    $estadisticas
-                )
-                ->send();
-        } catch (\Exception $e) {
-            return HttpResponseHelper::make()
-                ->internalErrorResponse(
-                    "Ocurrió un problema al procesar la solicitud. " .
-                        $e->getMessage()
-                )
+                ->unauthorizedResponse("No se tiene acceso como psicólogo.")
                 ->send();
         }
+
+        // Consulta: contar pacientes agrupados por género (o 'Desconocido' si es null/vacío)
+        $estadisticasDB = Paciente::where("idPsicologo", $psicologo->idPsicologo)
+            ->selectRaw("COALESCE(NULLIF(TRIM(genero), ''), 'Desconocido') as genero, COUNT(*) as cantidad")
+            ->groupBy("genero")
+            ->get();
+
+        $total = $estadisticasDB->sum("cantidad");
+        if ($total === 0) {
+            return HttpResponseHelper::make()
+                ->successfulResponse("No hay pacientes registrados.", [])
+                ->send();
+        }
+
+        // Agregar porcentaje
+        $estadisticas = $estadisticasDB->mapWithKeys(function ($item) use ($total) {
+            return [
+                $item->genero => [
+                    "cantidad" => $item->cantidad,
+                    "porcentaje" => round(($item->cantidad / $total) * 100),
+                ],
+            ];
+        });
+
+        return HttpResponseHelper::make()
+            ->successfulResponse(
+                "Porcentaje de pacientes por género obtenido correctamente",
+                $estadisticas
+            )
+            ->send();
+
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse(
+                "Ocurrió un problema al procesar la solicitud. " . $e->getMessage()
+            )
+            ->send();
     }
+}
 
     public function getPacientesEdad()
     {
@@ -639,31 +640,21 @@ class PacienteController extends Controller
                     ->send();
             }
 
-            // Obtener el conteo de pacientes por rango de edad
-            $estadisticas = Paciente::where(
-                "idPsicologo",
-                $psicologo->idPsicologo
-            )
-                ->get()
-                ->groupBy(function ($paciente) {
-                    $edad = Carbon::parse($paciente->fecha_nacimiento)->age;
-                    if ($edad <= 12) {
-                        return "0-12";
-                    } elseif ($edad <= 17) {
-                        return "13-17";
-                    } elseif ($edad <= 24) {
-                        return "18-24";
-                    } elseif ($edad <= 34) {
-                        return "25-34";
-                    } elseif ($edad <= 44) {
-                        return "35-44";
-                    } else {
-                        return "45+";
-                    }
-                })
-                ->map(function ($pacientes) {
-                    return $pacientes->count();
-                });
+            // Calcula edades y agrupar por rangos desde la bd :3
+            $estadisticas = Paciente::selectRaw("
+                    CASE
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) <= 12 THEN '0-12'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 13 AND 17 THEN '13-17'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 18 AND 24 THEN '18-24'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 25 AND 34 THEN '25-34'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 35 AND 44 THEN '35-44'
+                        ELSE '45+'
+                    END as rango,
+                    COUNT(*) as total
+                ")
+                ->where("idPsicologo", $psicologo->idPsicologo)
+                ->groupBy("rango")
+                ->pluck("total", "rango");
 
             return HttpResponseHelper::make()
                 ->successfulResponse(
@@ -706,6 +697,29 @@ class PacienteController extends Controller
                 ->successfulResponse(
                     "Estadísticas de pacientes por lugar obtenidas correctamente",
                     $estadisticas
+                )
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse(
+                    "Ocurrió un problema al procesar la solicitud. " .
+                        $e->getMessage()
+                )
+                ->send();
+        }
+    }
+
+    //Uso exclusivo para que Sandro se consuma, todos los pacientes quiere ver
+    public function getAllPacientes(){
+        try {
+            $pacientes = Paciente::where("activo", 1)
+                ->with("user")
+                ->get();
+
+            return HttpResponseHelper::make()
+                ->successfulResponse(
+                    "Pacientes obtenidos correctamente",
+                    $pacientes
                 )
                 ->send();
         } catch (\Exception $e) {

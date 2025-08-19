@@ -39,7 +39,8 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
         Route::put('/activar/{id}', 'enablePatient'); // Nueva ruta para activar paciente y vincular con psicologo
         Route::get('/deshabilitados', 'showEnablePaciente'); // Listar pacientes inactivos para el ADMIN
     });
-
+    //Endpoint para que sandro se consuma
+    Route::get('/todos', 'getAllPacientes');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::post('/{idCita?}', 'createPaciente');
         Route::get('/{id}', 'showPacienteById');
