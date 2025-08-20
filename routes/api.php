@@ -221,7 +221,13 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function()
 });
 
 Route::controller(DisponibilidadController::class)->prefix('disponibilidad')->group(function(){
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+        Route::get('/listar', 'listar');
+    });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::post('/crear', 'crearDisponibilidad');
+        Route::get('/listar-psicologo', 'listarPsicologo');
+        Route::delete('/eliminar', 'eliminarDisponibilidad');
+        Route::put('/editar', 'editarDisponibilidad');
     });
 });
