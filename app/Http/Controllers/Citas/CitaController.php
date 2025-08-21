@@ -57,7 +57,7 @@ class CitaController extends Controller
                     $query->select('idPsicologo', 'user_id')
                         ->with(['user:user_id,name,apellido']);
                 },
-                
+
                 'bouchers' => function ($query) {
                     $query->select('idBoucher', 'idCita', 'imagen', 'estado')
                         ->where('estado', 'pendiente');
@@ -73,6 +73,8 @@ class CitaController extends Controller
                     'hora_cita' => $cita->hora_cita,
                     'estado_Cita' => $cita->estado_Cita,
                     'paciente' => $cita->paciente,
+                    'motivo_Consulta' => $cita->motivo_Consulta,
+                    'duracion' => $cita->duracion,
                     'psicologo' => [
                         'idPsicologo' => $cita->psicologo?->idPsicologo,
                         'nombre' => $cita->psicologo?->user?->name,
@@ -246,7 +248,7 @@ class CitaController extends Controller
         }
     }
 
-    public function listarCitasPaciente(Request $request)
+    public function listarCitasPaciente(Request $request) // APLICADOS POR FILTRO
     {
         try {
             $userId = Auth::id();
@@ -265,16 +267,29 @@ class CitaController extends Controller
 
             $estadoCita = $request->query('estado_Cita');
             $estadoBoucher = $request->query('estado_boucher');
+            $fechaInicio = $request->query('fecha_inicio');
+            $fechaFin = $request->query('fecha_fin');
+            $nombrePsicologo = $request->query('nombre_psicologo');
 
-            $citas = Boucher::with('cita')
+            $citas = Boucher::with(['cita.psicologo.user'])
                 ->when($estadoBoucher, function ($query) use ($estadoBoucher) {
                     $query->where('estado', $estadoBoucher);
                 })
-                ->whereHas('cita', function ($query) use ($paciente, $estadoCita) {
+                ->whereHas('cita', function ($query) use ($paciente, $estadoCita, $fechaInicio, $fechaFin, $nombrePsicologo) {
                     $query->where('idPaciente', $paciente->idPaciente);
 
                     if ($estadoCita) {
                         $query->where('estado_Cita', $estadoCita);
+                    }
+
+                    if ($fechaInicio && $fechaFin) {
+                        $query->whereBetween('fecha_cita', [$fechaInicio, $fechaFin]);
+                    }
+
+                    if ($nombrePsicologo) {
+                        $query->whereHas('psicologo.user', function ($q) use ($nombrePsicologo) {
+                            $q->where('name', 'like', '%' . $nombrePsicologo . '%');
+                        });
                     }
                 })
                 ->paginate(10);
