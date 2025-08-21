@@ -217,6 +217,7 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function()
         Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente
         Route::get('/citas-sin-pagar', 'sinPagar');
         Route::get('/todas','todasPendientes');
+        Route::get('/rechazar','cancelarBoucher');
     });
 });
 

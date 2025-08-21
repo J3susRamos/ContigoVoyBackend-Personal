@@ -82,4 +82,9 @@ class Cita extends Model
     {
         return $this->hasOne(Boucher::class, 'idCita');
     }
+
+    public function bouchers(): HasMany
+    {
+        return $this->hasMany(Boucher::class, 'idCita', 'idCita');
+    }
 }

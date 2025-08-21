@@ -22,7 +22,7 @@ class BoucherController extends Controller
     {
         $request->validate([
             'idCita' => 'required|exists:citas,idCita',
-            'imagen' => ['required','string','regex:/^data:image\/webp;base64,/'],
+            'imagen' => ['required', 'string', 'regex:/^data:image\/webp;base64,/'],
         ]);
 
         try {
@@ -149,6 +149,50 @@ class BoucherController extends Controller
                 'status_message' => 'Internal server',
                 'description' => 'Error al obtener los bouchers pendientes.',
                 'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function cancelarBoucher(Request $request)
+    {
+        $request->validate([
+            'idBoucher' => 'required|exists:boucher,idBoucher',
+        ]);
+
+        try {
+            $userId = Auth::id();
+
+            $paciente = Paciente::where('user_id', $userId)->first();
+
+            if (!$paciente) {
+                return response()->json(['message' => 'Paciente no encontrado.'], 404);
+            }
+
+            $boucher = Boucher::where('idBoucher', $request->idBoucher)
+                ->whereHas('cita', function ($query) use ($paciente) {
+                    $query->where('idPaciente', $paciente->idPaciente);
+                })
+                ->first();
+
+            if (!$boucher) {
+                return response()->json(['message' => 'Boucher no encontrado o no te pertenece.'], 404);
+            }
+
+            if ($boucher->estado !== 'pendiente') {
+                return response()->json(['message' => 'Solo se pueden cancelar bouchers pendientes.'], 400);
+            }
+
+            $boucher->estado = 'rechazado';
+            $boucher->save();
+
+            return response()->json([
+                'message' => 'Boucher cancelado correctamente.',
+                'boucher' => $boucher
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Error al cancelar el boucher.',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
