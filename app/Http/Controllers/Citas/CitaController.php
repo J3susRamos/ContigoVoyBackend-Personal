@@ -51,8 +51,15 @@ class CitaController extends Controller
     public function listunpaid(Request $request)
     {
         try {
-
-            $citas = Cita::where('estado_Cita', 'Sin pagar')->get();
+            $citas = Cita::with([
+                'paciente:idPaciente,nombre,apellido',
+                'psicologo' => function ($query) {
+                    $query->select('idPsicologo', 'user_id')
+                        ->with(['user:user_id,name,apellido']);
+                }
+            ])
+                ->where('estado_Cita', 'Sin pagar')
+                ->get();
 
             return response()->json([
                 'status_code' => 200,
