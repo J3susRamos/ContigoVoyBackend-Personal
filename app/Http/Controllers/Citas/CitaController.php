@@ -248,7 +248,7 @@ class CitaController extends Controller
         }
     }
 
-    public function listarCitasPaciente(Request $request)
+    public function listarCitasPaciente(Request $request) // APLICADOS POR FILTRO
     {
         try {
             $userId = Auth::id();
