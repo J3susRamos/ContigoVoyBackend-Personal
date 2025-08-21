@@ -56,19 +56,40 @@ class CitaController extends Controller
                 'psicologo' => function ($query) {
                     $query->select('idPsicologo', 'user_id')
                         ->with(['user:user_id,name,apellido']);
+                },
+                
+                'bouchers' => function ($query) {
+                    $query->select('idBoucher', 'idCita', 'imagen', 'estado')
+                        ->where('estado', 'pendiente');
                 }
             ])
                 ->where('estado_Cita', 'Sin pagar')
                 ->get();
 
+            $result = $citas->map(function ($cita) {
+                return [
+                    'idCita' => $cita->idCita,
+                    'fecha_cita' => $cita->fecha_cita,
+                    'hora_cita' => $cita->hora_cita,
+                    'estado_Cita' => $cita->estado_Cita,
+                    'paciente' => $cita->paciente,
+                    'psicologo' => [
+                        'idPsicologo' => $cita->psicologo?->idPsicologo,
+                        'nombre' => $cita->psicologo?->user?->name,
+                        'apellido' => $cita->psicologo?->user?->apellido,
+                    ],
+                    'imagenes' => $cita->bouchers->pluck('imagen')->toArray(),
+                ];
+            });
+
             return response()->json([
                 'status_code' => 200,
                 'status_message' => 'OK',
                 'description' => 'Lista de citas sin pagar obtenida correctamente.',
-                'result' => $citas,
+                'result' => $result,
                 'errorBag' => []
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'status_code' => 500,
                 'status_message' => 'Internal Server Error',
