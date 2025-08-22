@@ -133,6 +133,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
+        Route::post('/rechazar', 'rechazarBoucher'); //no existe todavia, que Aldo su hombre del backend de Sandro lo cree.
     });
 });
 
