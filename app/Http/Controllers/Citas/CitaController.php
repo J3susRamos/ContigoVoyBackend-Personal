@@ -52,7 +52,7 @@ class CitaController extends Controller
     {
         try {
             $citas = Cita::with([
-                'paciente:idPaciente,nombre,apellido',
+                'paciente:idPaciente,nombre,apellido,celular',
                 'psicologo' => function ($query) {
                     $query->select('idPsicologo', 'user_id')
                         ->with(['user:user_id,name,apellido']);
@@ -72,7 +72,12 @@ class CitaController extends Controller
                     'fecha_cita' => $cita->fecha_cita,
                     'hora_cita' => $cita->hora_cita,
                     'estado_Cita' => $cita->estado_Cita,
-                    'paciente' => $cita->paciente,
+                    'paciente' => [
+                        'idPaciente' => $cita->paciente->idPaciente,
+                        'nombre' => $cita->paciente->nombre,
+                        'apellido' => $cita->paciente->apellido,
+                        'celular' => str_replace(' ', '', $cita->paciente->celular),
+                    ],
                     'motivo_Consulta' => $cita->motivo_Consulta,
                     'duracion' => $cita->duracion,
                     'psicologo' => [
