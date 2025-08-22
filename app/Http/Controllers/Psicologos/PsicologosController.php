@@ -56,7 +56,7 @@ class PsicologosController extends Controller
     public function showById(int $id): JsonResponse
     {
         try {
-            $psicologo = Psicologo::with(['especialidades', 'users'])->find($id);
+            $psicologo = Psicologo::with(['especialidades', 'user'])->find($id);
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
@@ -68,14 +68,14 @@ class PsicologosController extends Controller
                 // se modifico 'Titulo' a 'titulo'
                 'idPsicologo' => $psicologo->idPsicologo,
                 'titulo' => $psicologo->titulo,
-                'nombre' => $psicologo->users->name,
-                'apellido' => $psicologo->users->apellido,
+                'nombre' => $psicologo->user->name,
+                'apellido' => $psicologo->user->apellido,
                 'pais' => $psicologo->pais,
                 'genero' => $psicologo->genero,
-                'correo' => $psicologo->users->email,
-                'contraseña' => $psicologo->users->password,
-                'imagen' => $psicologo->users->imagen,
-                'fecha_nacimiento' => $psicologo->users->fecha_nacimiento->format('d/m/Y'),
+                'correo' => $psicologo->user->email,
+                'contraseña' => $psicologo->user->password,
+                'imagen' => $psicologo->user->imagen,
+                'fecha_nacimiento' => $psicologo->user->fecha_nacimiento->format('d/m/Y'),
                 'especialidades' => $psicologo->especialidades->pluck('nombre'),
                 'introduccion' => $psicologo->introduccion,
                 'experiencia' => $psicologo->experiencia,
@@ -97,7 +97,7 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'users'])->where('estado', 'A');
+            $query = Psicologo::with(['especialidades', 'user'])->where('estado', 'A');
 
             if ($request->filled("pais")) {
                 $paises = explode(",", $request->query("pais"));
@@ -123,7 +123,7 @@ class PsicologosController extends Controller
 
             if ($request->filled("search")) {
                 $search = $request->query("search");
-                $query->whereHas("users", function ($q) use ($search) {
+                $query->whereHas("user", function ($q) use ($search) {
                     $q->where("name", "like", "%{$search}%")
                         ->orWhere("apellido", "like", "%{$search}%");
                 });
@@ -169,7 +169,7 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'users'])->where('estado', 'I');
+            $query = Psicologo::with(['especialidades', 'user'])->where('estado', 'I');
 
             if ($request->filled("pais")) {
                 $paises = explode(",", $request->query("pais"));
@@ -195,7 +195,7 @@ class PsicologosController extends Controller
 
             if ($request->filled("search")) {
                 $search = $request->query("search");
-                $query->whereHas("users", function ($q) use ($search) {
+                $query->whereHas("user", function ($q) use ($search) {
                     $q->where("name", "like", "%{$search}%")
                         ->orWhere("apellido", "like", "%{$search}%");
                 });
@@ -240,17 +240,17 @@ class PsicologosController extends Controller
         return [
             'idPsicologo' => $psicologo->idPsicologo,
             'titulo' => $psicologo->titulo,
-            'nombre' => $psicologo->users->name,
-            'apellido' => $psicologo->users->apellido,
+            'nombre' => $psicologo->user->name,
+            'apellido' => $psicologo->user->apellido,
             'pais' => $psicologo->pais,
-            'edad' => $psicologo->users->edad,
+            'edad' => $psicologo->user->edad,
             'genero' => $psicologo->genero,
             'experiencia' => $psicologo->experiencia,
             'especialidades' => $psicologo->especialidades->pluck('nombre'),
             'introduccion' => $psicologo->introduccion,
             'horario' => $psicologo->horario,
-            'correo' => $psicologo->users->email,
-            'imagen' => $psicologo->users->imagen,
+            'correo' => $psicologo->user->email,
+            'imagen' => $psicologo->user->imagen,
         ];
     }
 
