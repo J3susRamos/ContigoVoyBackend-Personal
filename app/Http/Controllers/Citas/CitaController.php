@@ -59,7 +59,7 @@ class CitaController extends Controller
                 },
 
                 'bouchers' => function ($query) {
-                    $query->select('idBoucher', 'idCita', 'imagen', 'estado')
+                    $query->select('idBoucher', 'idCita', 'codigo', 'estado', 'created_at', 'imagen')
                         ->where('estado', 'pendiente');
                 }
             ])
@@ -72,15 +72,31 @@ class CitaController extends Controller
                     'fecha_cita' => $cita->fecha_cita,
                     'hora_cita' => $cita->hora_cita,
                     'estado_Cita' => $cita->estado_Cita,
-                    'paciente' => $cita->paciente,
                     'motivo_Consulta' => $cita->motivo_Consulta,
                     'duracion' => $cita->duracion,
+
+                    'paciente' => [
+                        'idPaciente' => $cita->paciente?->idPaciente,
+                        'nombre' => $cita->paciente?->nombre,
+                        'apellido' => $cita->paciente?->apellido,
+                    ],
+
                     'psicologo' => [
                         'idPsicologo' => $cita->psicologo?->idPsicologo,
                         'nombre' => $cita->psicologo?->user?->name,
                         'apellido' => $cita->psicologo?->user?->apellido,
                     ],
-                    'imagenes' => $cita->bouchers->pluck('imagen')->toArray(),
+
+                    'boucher' => $cita->bouchers->map(function ($boucher) {
+                        return [
+                            'idBoucher' => $boucher->idBoucher,
+                            'codigo' => $boucher->codigo,
+                            'estado' => $boucher->estado,
+                            'fecha_creacion' => $boucher->created_at?->format('Y-m-d H:i:s'),
+                            'imagen' => $boucher->imagen,
+                        ];
+                    })->first(),
+
                 ];
             });
 

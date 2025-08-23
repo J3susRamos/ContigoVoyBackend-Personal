@@ -112,7 +112,7 @@ Route::controller(CategoriaController::class)->prefix('categorias')->group(funct
 });
 
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
-    Route::get('/sin-pagar','listunpaid'); // Nueva ruta para listar citas sin pagar
+    Route::get('/sin-pagar','listunpaid'); // Administrador general(paciente, psicologo, boucher)
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
@@ -215,7 +215,7 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function()
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
         Route::post('/enviar', 'enviarBoucher');
         Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente
-        Route::get('/citas-sin-pagar', 'sinPagar');
+        Route::get('/citas-sin-pagar', 'sinPagar'); // El paciente autenticado que quiere ver sus propias citas sin pagar
         Route::get('/todas','todasPendientes');
         Route::get('/rechazar','cancelarBoucher');
     });
