@@ -67,11 +67,17 @@ Route::controller(PsicologosController::class)->prefix('psicologos')->group(func
         Route::delete('/{id}', 'DeletePsicologo');
         Route::put('/estado/{id}', 'cambiarEstadoPsicologo'); // Cambiar estado del psicólogo A = Activo, I = Inactivo
         Route::get('/inactivo', 'showInactivePsicologos'); // Nueva ruta para listar psicólogos inactivos
-    });
+        Route::get('/{id}/horarios-semana', 'getHorariosUltimaSemana'); // 👉nuevo ruta traer horarios ultima semana
+
+
+        
     Route::put('/update/{id}', 'actualizarPsicologo');
     Route::get('/especialidades/{id}', 'obtenerEspecialidades');
     Route::get('/', 'showAllPsicologos'); // listar psicologos activos
     Route::get('/{id}', 'showById');
+
+});
+
 });
 
 Route::controller(BlogController::class)->prefix('blogs')->group(function () {

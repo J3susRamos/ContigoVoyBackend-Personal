@@ -485,4 +485,51 @@ class PsicologosController extends Controller
                 ->send();
         }
     }
+
+
+
+//👇agregando metodo horarioultimasemana
+
+public function getHorariosUltimaSemana(int $id): JsonResponse
+{
+    try {
+        $psicologo = Psicologo::find($id);
+
+        if (!$psicologo) {
+            return HttpResponseHelper::make()
+                ->notFoundResponse('No se encontró un psicólogo con el ID proporcionado.')
+                ->send();
+        }
+
+        $horarios = $psicologo->horario ?? [];
+
+        // Filtrar solo últimos 7 días
+        $ultimaSemana = collect($horarios)->filter(function ($h) {
+            if (!isset($h['fecha'])) {
+                return false;
+            }
+            $fecha = Carbon::parse($h['fecha']);
+            return $fecha->greaterThanOrEqualTo(now()->subDays(7));
+        })->map(function ($h) {
+            $fecha = Carbon::parse($h['fecha']);
+            return [
+                'dia'   => $fecha->locale('es')->dayName,
+                'fecha' => $fecha->toDateString(),
+                'hora_inicio' => $h['hora_inicio'] ?? null,
+                'hora_fin'    => $h['hora_fin'] ?? null,
+            ];
+        })->values();
+
+        return HttpResponseHelper::make()
+            ->successfulResponse('Horarios obtenidos correctamente', $ultimaSemana)
+            ->send();
+
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse('Ocurrió un problema al obtener los horarios: ' . $e->getMessage())
+            ->send();
+    }
+}
+
+
 }
