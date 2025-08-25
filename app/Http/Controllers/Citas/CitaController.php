@@ -52,7 +52,7 @@ class CitaController extends Controller
     {
         try {
             $citas = Cita::with([
-                'paciente:idPaciente,nombre,apellido',
+                'paciente:idPaciente,nombre,apellido,celular',
                 'psicologo' => function ($query) {
                     $query->select('idPsicologo', 'user_id')
                         ->with(['user:user_id,name,apellido']);
@@ -72,14 +72,14 @@ class CitaController extends Controller
                     'fecha_cita' => $cita->fecha_cita,
                     'hora_cita' => $cita->hora_cita,
                     'estado_Cita' => $cita->estado_Cita,
+                    'paciente' => [
+                        'idPaciente' => $cita->paciente->idPaciente,
+                        'nombre' => $cita->paciente->nombre,
+                        'apellido' => $cita->paciente->apellido,
+                        'celular' => str_replace(' ', '', $cita->paciente->celular),
+                    ],
                     'motivo_Consulta' => $cita->motivo_Consulta,
                     'duracion' => $cita->duracion,
-
-                    'paciente' => [
-                        'idPaciente' => $cita->paciente?->idPaciente,
-                        'nombre' => $cita->paciente?->nombre,
-                        'apellido' => $cita->paciente?->apellido,
-                    ],
 
                     'psicologo' => [
                         'idPsicologo' => $cita->psicologo?->idPsicologo,
@@ -576,11 +576,13 @@ class CitaController extends Controller
     public function getCitasPorEstado()
     {
         $estadisticas = [
-            'confirmada' => Cita::where('estado_Cita', 'Confirmada')->count(),
+            'sin_pagar' => Cita::where('estado_Cita', 'Sin pagar')->count(),
             'pendientes' => Cita::where('estado_Cita', 'Pendiente')->count(),
             'canceladas' => Cita::where('estado_Cita', 'Cancelada')->count(),
+            'realizadas' => Cita::where('estado_Cita', 'Realizada')->count(),
+            'ausentes' => Cita::where('estado_Cita', 'Ausente')->count(),
+            'reprogramadas' => Cita::where('estado_Cita', 'Reprogramada')->count()
         ];
-
         return response()->json($estadisticas);
     }
 
@@ -634,14 +636,14 @@ class CitaController extends Controller
 
         // Obtener citas del psicólogo
         $totalCitas = Cita::where('idPsicologo', $idPsicologo)->count();
-        $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
-        $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'pendiente')->count();
-        $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'cancelada')->count();
-        // citas añadidas a la consulta
-        $citasConfirmadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'confirmada')->count();
-
+        $citasSinPagar = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'Sin pagar')->count();
+        $citasRealizadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'Realizada')->count();
+        $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'Pendiente')->count();
+        $citasCanceladas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'Cancelada')->count();
+        $citasReprogramadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'Reprogramada')->count();
+        $citasAusentes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'Ausente')->count();
         $totalMinutosReservados = Cita::where('idPsicologo', $idPsicologo)
-            ->whereIn('estado_Cita', ['completada', 'pendiente'])
+            ->whereIn('estado_Cita', ['Pendiente'])
             ->sum('duracion');
 
         //Cambio en total de pacientes
@@ -654,7 +656,7 @@ class CitaController extends Controller
 
         //Cambio en nuevos pacientes
         $nuevosPacientes = Cita::where('idPsicologo', $idPsicologo)
-            ->where('estado_Cita', 'confirmada')
+            ->where('estado_Cita', 'Pendiente')
             ->whereNotNull('idPaciente')
             ->where('fecha_Cita', '>=', now()->subDays(7))
             ->orderBy('fecha_Cita', 'asc')
@@ -663,13 +665,15 @@ class CitaController extends Controller
         return HttpResponseHelper::make()
             ->successfulResponse('Datos del dashboard cargados correctamente', [
                 'total_citas' => $totalCitas,
-                'citas_completadas' => $citasCompletadas,
+                'citas_sin_pagar' => $citasSinPagar,
+                'citas_realizadas' => $citasRealizadas,
                 'citas_pendientes' => $citasPendientes,
+                'citas_ausentes' => $citasAusentes,
+                'citas_reprogramadas' => $citasReprogramadas,
                 'citas_canceladas' => $citasCanceladas,
                 'total_minutos_reservados' => $totalMinutosReservados,
                 'total_pacientes' => $totalPacientes,
-                'nuevos_pacientes' => $nuevosPacientes,
-                'citas_confirmadas' => $citasConfirmadas
+                'nuevos_pacientes' => $nuevosPacientes
             ])
             ->send();
     }
