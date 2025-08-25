@@ -50,7 +50,7 @@ class Psicologo extends Model
         return $this->hasMany(Paciente::class, 'idPaciente', 'idPaciente');
     }
 
-    public function user(): BelongsTo
+    public function users(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
