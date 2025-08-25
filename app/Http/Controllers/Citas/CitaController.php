@@ -55,7 +55,7 @@ class CitaController extends Controller
                 'paciente:idPaciente,nombre,apellido,celular',
                 'psicologo' => function ($query) {
                     $query->select('idPsicologo', 'user_id')
-                        ->with(['user:user_id,name,apellido']);
+                        ->with(['users:user_id,name,apellido']);
                 },
 
                 'bouchers' => function ($query) {
@@ -83,8 +83,8 @@ class CitaController extends Controller
 
                     'psicologo' => [
                         'idPsicologo' => $cita->psicologo?->idPsicologo,
-                        'nombre' => $cita->psicologo?->user?->name,
-                        'apellido' => $cita->psicologo?->user?->apellido,
+                        'nombre' => $cita->psicologo?->users?->name,
+                        'apellido' => $cita->psicologo?->users?->apellido,
                     ],
 
                     'boucher' => $cita->bouchers->map(function ($boucher) {
