@@ -67,6 +67,7 @@ Route::controller(PsicologosController::class)->prefix('psicologos')->group(func
         Route::delete('/{id}', 'DeletePsicologo');
         Route::put('/estado/{id}', 'cambiarEstadoPsicologo'); // Cambiar estado del psicólogo A = Activo, I = Inactivo
         Route::get('/inactivo', 'showInactivePsicologos'); // Nueva ruta para listar psicólogos inactivos
+        Route::get('/nombre', 'listarNombre'); // listar nombre, apellido y idPsicologo de psicologos activos
     });
     Route::put('/update/{id}', 'actualizarPsicologo');
     Route::get('/especialidades/{id}', 'obtenerEspecialidades');
@@ -216,7 +217,7 @@ Route::prefix('whatsapp')->group(function () {
 Route::controller(BoucherController::class)->prefix('boucher')->group(function(){
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
         Route::post('/enviar', 'enviarBoucher');
-        Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente
+        Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente filtrar por estado, por rango de fechas y por id de cita
         Route::get('/citas-sin-pagar', 'sinPagar'); // El paciente autenticado que quiere ver sus propias citas sin pagar
         Route::get('/todas','todasPendientes');
         Route::get('/rechazar','cancelarBoucher');

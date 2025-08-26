@@ -163,6 +163,29 @@ class PsicologosController extends Controller
         }
     }
 
+    public function listarNombre(): JsonResponse
+    {
+        try{
+            $psicologos = Psicologo::with('users')
+                ->where('estado', 'A')
+                ->get(['idPsicologo', 'user_id'])
+                ->map(function($psicologo){
+                    return [
+                        'idPsicologo' => $psicologo->idPsicologo,
+                        'nombre' => $psicologo->users->name,
+                        'apellido' => $psicologo->users->apellido,
+                    ];
+                });
+            return HttpResponseHelper::make()
+                ->successfulResponse("Psicólogos obtenidos correctamente", $psicologos)
+                ->send();
+        }catch(\Exception $e){
+            return HttpResponseHelper::make()
+                ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
+                ->send();
+        }
+    }
+
     public function showInactivePsicologos(Request $request): JsonResponse
     {
         try {

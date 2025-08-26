@@ -71,7 +71,7 @@ class BoucherController extends Controller
         }
     }
 
-    public function getBouchers()
+    public function getBouchers(Request $request)
     {
         try {
             $userId = Auth::id();
@@ -84,11 +84,27 @@ class BoucherController extends Controller
 
             Log::info("Usuario autenticado: $userId, ID del paciente: {$paciente->idPaciente}");
 
-            $bouchers = DB::table('boucher')
+            $query = DB::table('boucher')
                 ->join('citas', 'boucher.idCita', '=', 'citas.idCita')
                 ->where('citas.idPaciente', $paciente->idPaciente)
-                ->select('boucher.*')
-                ->paginate(10);
+                ->select('boucher.*');
+
+            if ($request->filled('estado')) {
+                $query->where('boucher.estado', $request->input('estado'));
+            }
+
+            if ($request->filled('idCita')) {
+                $query->where('boucher.idCita', $request->input('idCita'));
+            }
+
+            if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+                $query->whereBetween('boucher.created_at', [
+                    $request->input('fecha_inicio'),
+                    $request->input('fecha_fin')
+                ]);
+            }
+
+            $bouchers = $query->paginate(10);
 
             Log::info('Bouchers con join: ' . count($bouchers));
 
