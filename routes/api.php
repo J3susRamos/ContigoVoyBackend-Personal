@@ -226,7 +226,7 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function()
 
 Route::controller(DisponibilidadController::class)->prefix('disponibilidad')->group(function(){
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
-        Route::get('/listar', 'listar');
+        Route::get('/listar', 'listar'); // filtrar fecha inicio y fecha fin
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::post('/crear', 'crearDisponibilidad');

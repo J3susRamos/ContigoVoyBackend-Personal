@@ -112,10 +112,20 @@ class DisponibilidadController extends Controller
 
             $request->validate([
                 'idPsicologo' => 'required|integer|exists:psicologos,idPsicologo',
+                'fecha_inicio' => 'nullable|date',
+                'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
             ]);
 
-            $disponibilidad = Disponibilidad::where('idPsicologo', $request->idPsicologo)
-                ->get();
+            $query = Disponibilidad::where('idPsicologo', $request->idPsicologo);
+
+            if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+                $query->whereBetween('fecha', [
+                    $request->input('fecha_inicio'),
+                    $request->input('fecha_fin')
+                ]);
+            }
+
+            $disponibilidad = $query->get();
 
             return response()->json([
                 'message' => 'Disponibilidad del psicólogo',
