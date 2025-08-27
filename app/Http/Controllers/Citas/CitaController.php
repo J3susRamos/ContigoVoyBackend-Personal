@@ -264,8 +264,7 @@ class CitaController extends Controller
         }
     }
 
-    public function listarCitasPaciente(Request $request) // APLICADOS POR FILTRO
-    {
+    public function listarCitasPaciente(Request $request){
         try {
             $userId = Auth::id();
 
@@ -285,30 +284,46 @@ class CitaController extends Controller
             $estadoBoucher = $request->query('estado_boucher');
             $fechaInicio = $request->query('fecha_inicio');
             $fechaFin = $request->query('fecha_fin');
-            $nombrePsicologo = $request->query('nombre_psicologo');
+            $perPage = $request->query('per_page', 10);
 
-            $citas = Boucher::with(['cita.psicologo.user'])
-                ->when($estadoBoucher, function ($query) use ($estadoBoucher) {
-                    $query->where('estado', $estadoBoucher);
-                })
-                ->whereHas('cita', function ($query) use ($paciente, $estadoCita, $fechaInicio, $fechaFin, $nombrePsicologo) {
-                    $query->where('idPaciente', $paciente->idPaciente);
+            $citasQuery = Cita::with(['boucher'])
+                ->where('idPaciente', $paciente->idPaciente);
 
-                    if ($estadoCita) {
-                        $query->where('estado_Cita', $estadoCita);
-                    }
+            if ($estadoCita) {
+                $citasQuery->where('estado_Cita', $estadoCita);
+            }
 
-                    if ($fechaInicio && $fechaFin) {
-                        $query->whereBetween('fecha_cita', [$fechaInicio, $fechaFin]);
-                    }
+            if ($fechaInicio) {
+                $citasQuery->where('fecha_cita', '>=', $fechaInicio);
+            }
 
-                    if ($nombrePsicologo) {
-                        $query->whereHas('psicologo.user', function ($q) use ($nombrePsicologo) {
-                            $q->where('name', 'like', '%' . $nombrePsicologo . '%');
-                        });
-                    }
-                })
-                ->paginate(10);
+            if ($fechaFin) {
+                $citasQuery->where('fecha_cita', '<=', $fechaFin);
+            }
+
+            if ($estadoBoucher) {
+                $citasQuery->whereHas('boucher', function($q) use ($estadoBoucher) {
+                    $q->where('estado', $estadoBoucher);
+                });
+            }
+
+            $citas = $citasQuery->paginate($perPage);
+
+            $citas->getCollection()->transform(function ($cita) {
+                $citaArray = $cita->toArray(); 
+
+                $citaArray['idPsicologo'] = $cita->psicologo?->idPsicologo ?? null;
+                $citaArray['nombrePsicologo'] = $cita->psicologo?->users?->name ?? null;
+                $citaArray['apellidoPsicologo'] = $cita->psicologo?->users?->apellido ?? null;
+
+                $citaArray['boucher'] = $cita->boucher ? [
+                    'idBoucher' => $cita->boucher->idBoucher,
+                    'codigo' => $cita->boucher->codigo,
+                    'estado' => $cita->boucher->estado,
+                ] : null;
+
+                return $citaArray;
+            });
 
             return response()->json([
                 'status_code' => 200,
@@ -317,6 +332,7 @@ class CitaController extends Controller
                 'citas' => $citas,
                 'errorBag' => []
             ], 200);
+
         } catch (Exception $e) {
             return response()->json([
                 'status_code' => 500,
