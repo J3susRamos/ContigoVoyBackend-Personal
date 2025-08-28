@@ -114,7 +114,6 @@ Route::controller(CategoriaController::class)->prefix('categorias')->group(funct
 });
 
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
-    Route::get('/contador','estadisticas');//contador de estados por citas
     Route::get('/sin-pagar','listunpaid'); // Administrador general(paciente, psicologo, boucher)
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
@@ -122,6 +121,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::post('/cancelar-sin-pago','cancelarCitasNoPagadas');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
         Route::get('/enlaces','listarCitasPaciente');
+        Route::get('/contador','estadisticas');//contador de estados por citas
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
