@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Boucher;
+use Illuminate\Support\Facades\DB;
 
 class CitaController extends Controller
 {
@@ -677,4 +678,18 @@ class CitaController extends Controller
             ])
             ->send();
     }
+
+
+    public function estadisticas()
+    {
+        $conteo = Cita::select('estado_Cita', DB::raw('count(*) as total'))
+            ->groupBy('estado_Cita')
+            ->pluck('total','estado_Cita');
+
+        return response()->json([
+            'success' => true,
+            'data' => $conteo
+        ]);
+    }
+
 }
