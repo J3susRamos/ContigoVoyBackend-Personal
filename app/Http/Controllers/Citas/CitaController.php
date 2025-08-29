@@ -265,8 +265,7 @@ class CitaController extends Controller
         }
     }
 
-    public function listarCitasPaciente(Request $request) // APLICADOS POR FILTRO
-    {
+    public function listarCitasPaciente(Request $request){
         try {
             $userId = Auth::id();
 
@@ -286,30 +285,42 @@ class CitaController extends Controller
             $estadoBoucher = $request->query('estado_boucher');
             $fechaInicio = $request->query('fecha_inicio');
             $fechaFin = $request->query('fecha_fin');
-            $nombrePsicologo = $request->query('nombre_psicologo');
+            $perPage = $request->query('per_page', 10);
 
-            $citas = Boucher::with(['cita.psicologo.user'])
-                ->when($estadoBoucher, function ($query) use ($estadoBoucher) {
-                    $query->where('estado', $estadoBoucher);
-                })
-                ->whereHas('cita', function ($query) use ($paciente, $estadoCita, $fechaInicio, $fechaFin, $nombrePsicologo) {
-                    $query->where('idPaciente', $paciente->idPaciente);
+            $citasQuery = Cita::with(['boucher'])
+                ->where('idPaciente', $paciente->idPaciente);
 
-                    if ($estadoCita) {
-                        $query->where('estado_Cita', $estadoCita);
-                    }
+            if ($estadoCita) {
+                $citasQuery->where('estado_Cita', $estadoCita);
+            }
 
-                    if ($fechaInicio && $fechaFin) {
-                        $query->whereBetween('fecha_cita', [$fechaInicio, $fechaFin]);
-                    }
+            if ($fechaInicio) {
+                $citasQuery->where('fecha_cita', '>=', $fechaInicio);
+            }
 
-                    if ($nombrePsicologo) {
-                        $query->whereHas('psicologo.user', function ($q) use ($nombrePsicologo) {
-                            $q->where('name', 'like', '%' . $nombrePsicologo . '%');
-                        });
-                    }
-                })
-                ->paginate(10);
+            if ($fechaFin) {
+                $citasQuery->where('fecha_cita', '<=', $fechaFin);
+            }
+
+            if ($estadoBoucher) {
+                $citasQuery->whereHas('boucher', function($q) use ($estadoBoucher) {
+                    $q->where('estado', $estadoBoucher);
+                });
+            }
+
+            $citas = $citasQuery->paginate($perPage);
+
+            $citas->getCollection()->transform(function ($cita) {
+                $citaArray = $cita->toArray(); 
+
+                $citaArray['idPsicologo'] = $cita->psicologo?->idPsicologo ?? null;
+                $citaArray['nombrePsicologo'] = $cita->psicologo?->users?->name ?? null;
+                $citaArray['apellidoPsicologo'] = $cita->psicologo?->users?->apellido ?? null;
+
+                $citaArray['boucher'] = $cita->boucher ? [ 'idBoucher' => $cita->boucher->idBoucher, 'codigo' => $cita->boucher->codigo, 'estado' => $cita->boucher->estado, ] : null;
+
+                return $citaArray;
+            });
 
             return response()->json([
                 'status_code' => 200,
@@ -318,6 +329,7 @@ class CitaController extends Controller
                 'citas' => $citas,
                 'errorBag' => []
             ], 200);
+
         } catch (Exception $e) {
             return response()->json([
                 'status_code' => 500,
@@ -471,6 +483,66 @@ class CitaController extends Controller
             'duracion' => "{$cita->duracion} min.",
             'jitsi_url' => "{$cita->jitsi_url}"
         ];
+    }
+
+    public function getCitaVouchers(int $id)
+    {
+        try{
+
+            $userId = Auth::id();
+            $paciente = Paciente::where('user_id', $userId)->first();
+            if (!$paciente) {
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'Paciente no encontrado.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            $cita = Cita::where("idCita",$id)->first();
+            if(!$cita){
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'Cita no encontrada.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            //Cambiar para que los administradores tambien puedan obtener cualquier cita
+            if($cita->idPaciente != $paciente->idPaciente){
+                return response()->json([
+                    'status_code' => 403,
+                    'status_message' => 'Forbidden',
+                    'description' => 'No tienes permisos para obtener esta cita',
+                    'result' => null,
+                    'errorBag' => []
+                ], 403);
+            }
+
+            $bouchersCitas = Cita::with('bouchers')->find($id);
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Cita del paciente obtenida correctamente.',
+                'citas' => $bouchersCitas,
+                'errorBag' => []
+            ], 200);
+
+
+        }catch (Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al obtener la cita del paciente.',
+                'result' => null,
+                'errorBag' => ['exception' => $e->getMessage()]
+            ], 500);
+        }
     }
 
     public function showCitaById(int $id)

@@ -122,6 +122,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::post('/cancelar-sin-pago','cancelarCitasNoPagadas');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
         Route::get('/enlaces','listarCitasPaciente');
+        Route::get('/paciente/{id}','getCitaVouchers');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
