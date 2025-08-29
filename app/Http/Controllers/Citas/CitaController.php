@@ -316,11 +316,7 @@ class CitaController extends Controller
                 $citaArray['nombrePsicologo'] = $cita->psicologo?->users?->name ?? null;
                 $citaArray['apellidoPsicologo'] = $cita->psicologo?->users?->apellido ?? null;
 
-                $citaArray['boucher'] = $cita->boucher ? [
-                    'idBoucher' => $cita->boucher->idBoucher,
-                    'codigo' => $cita->boucher->codigo,
-                    'estado' => $cita->boucher->estado,
-                ] : null;
+                $citaArray['boucher'] = $cita->boucher ? [ 'idBoucher' => $cita->boucher->idBoucher, 'codigo' => $cita->boucher->codigo, 'estado' => $cita->boucher->estado, ] : null;
 
                 return $citaArray;
             });
@@ -486,6 +482,66 @@ class CitaController extends Controller
             'duracion' => "{$cita->duracion} min.",
             'jitsi_url' => "{$cita->jitsi_url}"
         ];
+    }
+
+    public function getCitaVouchers(int $id)
+    {
+        try{
+
+            $userId = Auth::id();
+            $paciente = Paciente::where('user_id', $userId)->first();
+            if (!$paciente) {
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'Paciente no encontrado.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            $cita = Cita::where("idCita",$id)->first();
+            if(!$cita){
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Not Found',
+                    'description' => 'Cita no encontrada.',
+                    'result' => null,
+                    'errorBag' => []
+                ], 404);
+            }
+
+            //Cambiar para que los administradores tambien puedan obtener cualquier cita
+            if($cita->idPaciente != $paciente->idPaciente){
+                return response()->json([
+                    'status_code' => 403,
+                    'status_message' => 'Forbidden',
+                    'description' => 'No tienes permisos para obtener esta cita',
+                    'result' => null,
+                    'errorBag' => []
+                ], 403);
+            }
+
+            $bouchersCitas = Cita::with('bouchers')->find($id);
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Cita del paciente obtenida correctamente.',
+                'citas' => $bouchersCitas,
+                'errorBag' => []
+            ], 200);
+
+
+        }catch (Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al obtener la cita del paciente.',
+                'result' => null,
+                'errorBag' => ['exception' => $e->getMessage()]
+            ], 500);
+        }
     }
 
     public function showCitaById(int $id)
