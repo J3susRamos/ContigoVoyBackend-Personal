@@ -126,6 +126,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::get('/enlaces','listarCitasPaciente');
         Route::get('/paciente/{id}','getCitaVouchers');
         Route::get('/contador','estadisticas');//contador de estados por citas
+        Route::get('/paciente/{id}','getCitaVouchers');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
