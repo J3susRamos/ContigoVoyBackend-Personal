@@ -14,6 +14,8 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Boucher;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
 
 class CitaController extends Controller
 {
@@ -27,6 +29,8 @@ class CitaController extends Controller
             $data = $request->validated();
             $data['idPsicologo'] = $psicologo->idPsicologo;
 
+            Log::info('Datos recibidos en la solicitud: ', $data);
+
             if (!isset($data['estado_Cita']) || $data['estado_Cita'] !== 'Sin pagar') {
                 return response()->json([
                     'status_code' => 400,
@@ -38,6 +42,8 @@ class CitaController extends Controller
             }
 
             $cita = Cita::create($data);
+
+            Artisan::call('app:cancelar-citas-sin-pagar');
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Cita creada correctamente', ['data' => $cita])

@@ -14,7 +14,6 @@ class DisponibilidadController extends Controller
 {
     public function crearDisponibilidad(Request $request)
     {
-
         try {
 
             $Auth = Auth::id();
@@ -27,45 +26,52 @@ class DisponibilidadController extends Controller
             }
 
             $request->validate([
-                'fecha' => 'required|date|after_or_equal:today',
-                'hora_inicio' => 'required|date_format:H:i',
-                'hora_fin' => 'required|date_format:H:i|after:hora_inicio',
-                'turno' => 'nullable|string',
+                'fechas' => 'required|array',
+                'fechas.*.fecha' => 'required|date|after_or_equal:today',
+                'fechas.*.hora_inicio' => 'required|date_format:H:i',
+                'fechas.*.hora_fin' => 'required|date_format:H:i|after:fechas.*.hora_inicio',
+                'fechas.*.turno' => 'nullable|string',
             ], [
-                'fecha.after_or_equal' => 'La fecha seleccionada debe ser hoy o una fecha futura.',
-                'hora_fin.after' => 'La hora final debe ser posterior a la hora de inicio.',
+                'fechas.*.fecha.after_or_equal' => 'La fecha seleccionada debe ser hoy o una fecha futura.',
+                'fechas.*.hora_fin.after' => 'La hora final debe ser posterior a la hora de inicio.',
             ]);
 
-            $yaExiste = Disponibilidad::where('idPsicologo', $psicologo->idPsicologo)
-                ->where('fecha', $request->fecha)
-                ->where(function ($query) use ($request) {
-                    $query->whereBetween('hora_inicio', [$request->hora_inicio, $request->hora_fin])
-                        ->orWhereBetween('hora_fin', [$request->hora_inicio, $request->hora_fin])
-                        ->orWhere(function ($q) use ($request) {
-                            $q->where('hora_inicio', '<=', $request->hora_inicio)
-                                ->where('hora_fin', '>=', $request->hora_fin);
-                        });
-                })
-                ->exists();
+            // Verificar si ya existe disponibilidad para alguna de las fechas y rangos horarios
+            foreach ($request->fechas as $fechaData) {
+                $yaExiste = Disponibilidad::where('idPsicologo', $psicologo->idPsicologo)
+                    ->where('fecha', $fechaData['fecha'])
+                    ->where(function ($query) use ($fechaData) {
+                        $query->whereBetween('hora_inicio', [$fechaData['hora_inicio'], $fechaData['hora_fin']])
+                            ->orWhereBetween('hora_fin', [$fechaData['hora_inicio'], $fechaData['hora_fin']])
+                            ->orWhere(function ($q) use ($fechaData) {
+                                $q->where('hora_inicio', '<=', $fechaData['hora_inicio'])
+                                    ->where('hora_fin', '>=', $fechaData['hora_fin']);
+                            });
+                    })
+                    ->exists();
 
-            if ($yaExiste) {
-                return HttpResponseHelper::make()
-                    ->validationErrorResponse("Ya existe una disponibilidad en ese rango horario para este psicólogo.", [])
-                    ->send();
+                if ($yaExiste) {
+                    return HttpResponseHelper::make()
+                        ->validationErrorResponse("Ya existe una disponibilidad en ese rango horario para este psicólogo.", [])
+                        ->send();
+                }
             }
 
-
-            $disponibilidad = Disponibilidad::create([
-                'idPsicologo' => $psicologo->idPsicologo,
-                'fecha' => $request->fecha,
-                'hora_inicio' => $request->hora_inicio,
-                'hora_fin' => $request->hora_fin,
-                'turno' => $request->turno,
-            ]);
+            $disponibilidades = [];
+            foreach ($request->fechas as $fechaData) {
+                $disponibilidad = Disponibilidad::create([
+                    'idPsicologo' => $psicologo->idPsicologo,
+                    'fecha' => $fechaData['fecha'],
+                    'hora_inicio' => $fechaData['hora_inicio'],
+                    'hora_fin' => $fechaData['hora_fin'],
+                    'turno' => $fechaData['turno'],
+                ]);
+                $disponibilidades[] = $disponibilidad;
+            }
 
             return response()->json([
-                'message' => 'Disponibilidad guardada correctamente',
-                'data' => $disponibilidad,
+                'message' => 'Disponibilidades guardadas correctamente',
+                'data' => $disponibilidades,
             ], 201);
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
@@ -131,7 +137,6 @@ class DisponibilidadController extends Controller
                 'message' => 'Disponibilidad del psicólogo',
                 'data' => $disponibilidad,
             ], 200);
-            
         } catch (Exception $e) {
 
             return HttpResponseHelper::make()
