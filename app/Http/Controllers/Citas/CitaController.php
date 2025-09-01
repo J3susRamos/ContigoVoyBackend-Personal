@@ -14,6 +14,8 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Boucher;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
 
 class CitaController extends Controller
 {
@@ -27,6 +29,8 @@ class CitaController extends Controller
             $data = $request->validated();
             $data['idPsicologo'] = $psicologo->idPsicologo;
 
+            Log::info('Datos recibidos en la solicitud: ', $data);
+
             if (!isset($data['estado_Cita']) || $data['estado_Cita'] !== 'Sin pagar') {
                 return response()->json([
                     'status_code' => 400,
@@ -38,6 +42,8 @@ class CitaController extends Controller
             }
 
             $cita = Cita::create($data);
+
+            Artisan::call('app:cancelar-citas-sin-pagar');
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Cita creada correctamente', ['data' => $cita])
@@ -754,14 +760,32 @@ class CitaController extends Controller
 
     public function estadisticas()
     {
-        $conteo = Cita::select('estado_Cita', DB::raw('count(*) as total'))
-            ->groupBy('estado_Cita')
-            ->pluck('total','estado_Cita');
+        try {
 
-        return response()->json([
-            'success' => true,
-            'data' => $conteo
-        ]);
+            $userId = Auth::id();
+            $paciente = Paciente::where('user_id', $userId)->first();
+
+            if (!$paciente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Paciente no encontrado'
+                ], 404);
+            }
+
+            $conteo = Cita::where('idPaciente', $paciente->id)
+                ->select('estado_Cita', DB::raw('count(*) as total'))
+                ->groupBy('estado_Cita')
+                ->pluck('total', 'estado_Cita');
+
+            return response()->json([
+                'success' => true,
+                'data' => $conteo
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las estadísticas: ' . $e->getMessage()
+            ], 500);
+        }
     }
-
 }

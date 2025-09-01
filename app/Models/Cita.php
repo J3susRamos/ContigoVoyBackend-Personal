@@ -34,6 +34,7 @@ class Cita extends Model
         "motivo_Consulta",
         "estado_Cita",
         "colores",
+        "fecha_limite",
         "duracion",
         "fecha_cita",
         "hora_cita",
