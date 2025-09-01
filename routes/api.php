@@ -119,6 +119,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
     Route::post('/cancelar-sin-pago','cancelarCitasNoPagadas');
+    Route::get('/cancelar-cita', 'cancelarCita');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
         Route::get('/enlaces','listarCitasPaciente');
         Route::get('/contador','estadisticas');//contador de estados por citas

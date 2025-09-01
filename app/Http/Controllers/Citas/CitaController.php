@@ -716,4 +716,50 @@ class CitaController extends Controller
             ], 500);
         }
     }
+
+    public function cancelarCita(Request $request)
+    {
+        try {
+            $userId = Auth::id();
+
+            $estado = $request->input('estado');
+
+            if (!$estado || strtolower($estado) !== 'sin pagar') {
+                return response()->json([
+                    'status_code' => 400,
+                    'status_message' => 'Bad Request',
+                    'description' => 'El estado proporcionado debe ser "Sin pagar"',
+                ], 400);
+            }
+
+            $hoy = now()->toDateString();
+
+            $citasSinPagarVencidas = Cita::where('estado_Cita', 'Sin pagar')
+                ->whereDate('fecha_limite', '<', $hoy)
+                ->get();
+
+            foreach ($citasSinPagarVencidas as $cita) {
+                $cita->estado_Cita = 'Cancelado';
+                $cita->save();
+            }
+
+            $citasCanceladas = Cita::where('estado_Cita', 'Cancelado')->get();
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Citas vencidas canceladas correctamente. Se listan todas las citas canceladas.',
+                'citas_canceladas_ahora' => $citasSinPagarVencidas,
+                'todas_las_citas_canceladas' => $citasCanceladas,
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al cancelar las citas',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
