@@ -26,11 +26,11 @@ class DisponibilidadController extends Controller
                     ->send();
             }
 
-            $request->validate([
+            $request->validate([ //esto
                 'fecha' => 'required|date|after_or_equal:today',
                 'hora_inicio' => 'required|date_format:H:i',
                 'hora_fin' => 'required|date_format:H:i|after:hora_inicio',
-                'turno' => 'nullable|string',
+                'turno' => 'nullable|string', // a  esto
             ], [
                 'fecha.after_or_equal' => 'La fecha seleccionada debe ser hoy o una fecha futura.',
                 'hora_fin.after' => 'La hora final debe ser posterior a la hora de inicio.',
@@ -231,4 +231,43 @@ class DisponibilidadController extends Controller
                 ->send();
         }
     }
+
+
+//METODO ULTIMOS 7 DIAS
+public function ultimos7dias(Request $request)
+{
+    try {
+
+        $authUserId = Auth::id();
+
+        $psicologo = Psicologo::where('user_id', $authUserId)->first();
+
+        if (!$psicologo) {
+            return response()->json([
+                'message' => 'Psicólogo no encontrado para el usuario autenticado',
+            ], 404);
+        }
+
+        // Calcular fecha de hace 7 días y fecha actual
+        $fechaInicio = now()->subDays(7)->format('Y-m-d');
+        $fechaFin = now()->format('Y-m-d');
+
+        $disponibilidad = Disponibilidad::where('idPsicologo', $psicologo->idPsicologo)
+            ->whereBetween('fecha', [$fechaInicio, $fechaFin])
+            ->orderBy('fecha', 'asc')
+            ->orderBy('hora_inicio', 'asc')
+            ->get();
+
+        return response()->json([
+            'message' => 'Disponibilidad de los últimos 7 días',
+            'data' => $disponibilidad,
+        ], 200);
+
+    } catch (Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse("Error: " . $e->getMessage())
+            ->send();
+    }
+}
+
 }
