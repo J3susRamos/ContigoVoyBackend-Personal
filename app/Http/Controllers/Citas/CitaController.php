@@ -271,6 +271,48 @@ class CitaController extends Controller
         }
     }
 
+    public function rechazarBoucher(request $request){
+        $request->validate([
+            'codigo' => 'required|exists:boucher,codigo',
+        ]);
+
+        try {
+            $userId = Auth::id();
+            
+            $codigo = $request->input('codigo');
+
+             if (!$codigo) {
+                return response()->json([
+                    'status_code' => 500,
+                    'status_message' => 'Internal serve',
+                    'description' => 'Error al recibir el codigo del boucher',
+                ], 500);
+            }
+
+            $boucher = Boucher::where('codigo', $codigo)
+                ->where('estado', 'pendiente')
+                ->first();
+
+            if (!$boucher) {
+                return response()->json(['message' => 'Boucher no encontrado o no te pertenece. Solo se pueden cancelar bouchers pendientes.'], 404);
+            }
+
+            $boucher->estado = 'rechazado';
+            $boucher->save();
+
+            return response()->json([
+                'message' => 'Boucher cancelado correctamente.',
+                'boucher' => $boucher
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Error al cancelar el boucher.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function listarCitasPaciente(Request $request){
         try {
             $userId = Auth::id();

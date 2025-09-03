@@ -139,7 +139,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
-        Route::post('/rechazar', 'rechazarBoucher'); //no existe todavia, que Aldo su hombre del backend de Sandro lo cree.
+        Route::post('/rechazar', 'rechazarBoucher'); 
     });
 });
 
@@ -225,7 +225,7 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function (
         Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente filtrar por estado, por rango de fechas y por id de cita
         Route::get('/citas-sin-pagar', 'sinPagar'); // El paciente autenticado que quiere ver sus propias citas sin pagar
         Route::get('/todas','todasPendientes');
-        Route::get('/rechazar','cancelarBoucher');
+        Route::post('/rechazar','cancelarBoucher');
     });
 });
 

@@ -46,7 +46,7 @@ class BoucherController extends Controller
                 return response()->json(['message' => 'La cita no existe o no te pertenece.'], 404);
             }
 
-            $boucherExistente = Boucher::where('idCita', $cita->idCita)->first();
+            $boucherExistente = Boucher::where('idCita', $cita->idCita)->whereIn('estado', ['pendiente', 'aceptado'])->first();
             if ($boucherExistente) {
                 return response()->json(['message' => 'Ya has enviado un boucher para esta cita.'], 409);
             }
