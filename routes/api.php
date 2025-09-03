@@ -21,6 +21,8 @@ use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\Boucher\BoucherController;
 use App\Http\Controllers\Disponibilidad\DisponibilidadController;
 
+
+
 Route::controller(AuthController::class)->prefix('auth')->group(function () {
     Route::post('/login', 'login')->name('login');
     Route::post('/logout', 'logout')->middleware('auth:sanctum');
@@ -36,8 +38,8 @@ Route::controller(ContactosController::class)->prefix('contactos')->group(functi
 
 Route::controller(PacienteController::class)->prefix('pacientes')->group(function () {
 
-    Route::post('/enviar-codigo','resetPassword');
-    Route::post('/verificar-codigo','verificarCodigo');
+    Route::post('/enviar-codigo', 'resetPassword');
+    Route::post('/verificar-codigo', 'verificarCodigo');
 
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::put('/activar/{id}', 'enablePatient'); // Nueva ruta para activar paciente y vincular con psicologo
@@ -60,7 +62,8 @@ Route::controller(PacienteController::class)->prefix('pacientes')->group(functio
 });
 
 Route::controller(PsicologosController::class)->prefix('psicologos')->group(function () {
-    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () { 
+
         Route::get('/dashboard', 'psicologoDashboard');
         Route::post('/', 'createPsicologo');
         Route::put('/{id}', 'updatePsicologo');
@@ -114,14 +117,14 @@ Route::controller(CategoriaController::class)->prefix('categorias')->group(funct
 });
 
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
-    Route::get('/sin-pagar','listunpaid'); // Administrador general(paciente, psicologo, boucher)
+    Route::get('/sin-pagar', 'listunpaid'); // Nueva ruta para listar citas sin pagar
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
-    Route::post('/cancelar-sin-pago','cancelarCitasNoPagadas');
-    Route::get('/cancelar-cita', 'cancelarCita');
+    Route::post('/cancelar-sin-pago', 'cancelarCitasNoPagadas');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
         Route::get('/enlaces','listarCitasPaciente');
+        Route::get('/paciente/{id}','getCitaVouchers');
         Route::get('/contador','estadisticas');//contador de estados por citas
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
@@ -132,7 +135,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::get('/{id}', 'showCitaById');
         Route::put('/{id}', 'updateCita');
         Route::delete('/{id}', 'destroyCita');
-        Route::post('/realizada','citaRealizada');
+        Route::post('/realizada', 'citaRealizada');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
@@ -216,7 +219,7 @@ Route::prefix('whatsapp')->group(function () {
     Route::get('status', [WhatsAppController::class, 'status']);
 });
 
-Route::controller(BoucherController::class)->prefix('boucher')->group(function(){
+Route::controller(BoucherController::class)->prefix('boucher')->group(function () {
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|PACIENTE']], function () {
         Route::post('/enviar', 'enviarBoucher');
         Route::get('/pendientes-aceptadas', 'getBouchers'); // lista citas pendientes y aceptadas del paciente filtrar por estado, por rango de fechas y por id de cita
@@ -226,7 +229,7 @@ Route::controller(BoucherController::class)->prefix('boucher')->group(function()
     });
 });
 
-Route::controller(DisponibilidadController::class)->prefix('disponibilidad')->group(function(){
+Route::controller(DisponibilidadController::class)->prefix('disponibilidad')->group(function () {
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::get('/listar', 'listar'); // filtrar fecha inicio y fecha fin
     });
@@ -235,5 +238,8 @@ Route::controller(DisponibilidadController::class)->prefix('disponibilidad')->gr
         Route::get('/listar-psicologo', 'listarPsicologo');
         Route::delete('/eliminar', 'eliminarDisponibilidad');
         Route::put('/editar', 'editarDisponibilidad');
+        Route::get('/ultimos-7-dias', 'ultimos7dias');  // 👉nuevo ruta traer horarios ultima semana
     });
+
+      
 });
