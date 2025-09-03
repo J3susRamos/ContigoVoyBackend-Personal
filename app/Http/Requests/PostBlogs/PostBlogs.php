@@ -23,6 +23,7 @@ class PostBlogs extends FormRequest
     {
         return [
             'tema'          => 'required|string|min:20|max:200',
+            'slug'          => 'sometimes|string|max:100|unique:blogs,slug,' . $this->route('id'),
             'contenido'     => 'required|string|min:200',
             'imagenes'      => 'required|array|min:1|max:6',
             'imagenes.*'    => 'required|string', // Cada imagen debe ser un string (base64 o URL)
@@ -39,6 +40,12 @@ class PostBlogs extends FormRequest
         return [
             'idCategoria.required' => 'El campo categoría es obligatorio.',
             'idCategoria.exists' => 'La categoría seleccionada no existe.',
+            'tema.required' => 'El título es obligatorio.',
+            'tema.min' => 'El título debe tener al menos 20 caracteres.',
+            'tema.max' => 'El título no puede exceder 200 caracteres.',
+            'slug.string' => 'El slug debe ser texto.',
+            'slug.max' => 'El slug no puede exceder 100 caracteres.',
+            'slug.unique' => 'Este slug ya está en uso.',
             'contenido.required' => 'El contenido es obligatorio.',
             'contenido.min' => 'El contenido debe tener al menos 200 caracteres.',
             'imagenes.required' => 'Debe agregar al menos 1 imagen.',

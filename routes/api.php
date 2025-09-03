@@ -98,7 +98,7 @@ Route::controller(BlogController::class)
     ->prefix("blogs")
     ->group(function () {
         Route::get("/authors", "showAllAuthors");
-        Route::get("/{id}", "showbyIdBlog");
+        Route::get("/{identifier}", "showbyIdBlog"); // Acepta tanto ID como slug
         Route::get("/all", "showAllBlogs");
         Route::get("/", "BlogAllPreviews");
 

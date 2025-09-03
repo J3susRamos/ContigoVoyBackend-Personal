@@ -47,6 +47,7 @@ class BlogController extends Controller
                 return [
                     'id' => $blog->idBlog,
                     'tema' => $blog->tema,
+                    'slug' => $blog->slug,
                     'contenido' => Str::limit($blog->contenido, 150),
                     'imagenes' => $blog->imagenes, // Array de imágenes
                     'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
@@ -79,6 +80,7 @@ class BlogController extends Controller
             $blogs = $blogs->map(fn($blog) => [
                 'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
+                'slug' => $blog->slug,
                 'contenido' => $blog->contenido,
                 'imagenes' => $blog->imagenes, // Array de imágenes
                 'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
@@ -99,19 +101,31 @@ class BlogController extends Controller
         }
     }
 
-    public function showbyIdBlog($id): JsonResponse
+    public function showbyIdBlog($identifier): JsonResponse
     {
         try {
-            $blog = Blog::with(['categoria', 'psicologo.users'])->find($id); // Eliminamos el `get()`
+            // Intentar buscar por ID numérico primero, luego por slug
+            $blog = null;
+
+            if (is_numeric($identifier)) {
+                $blog = Blog::with(['categoria', 'psicologo.users'])->find($identifier);
+            }
+
+            // Si no se encuentra por ID o no es numérico, buscar por slug
+            if (!$blog) {
+                $blog = Blog::with(['categoria', 'psicologo.users'])->where('slug', $identifier)->first();
+            }
 
             if (!$blog) {
                 return HttpResponseHelper::make()
                     ->notFoundResponse('El blog no fue encontrado')
                     ->send();
             }
+
             $responseData = [
                 'id' => $blog->idBlog,
                 'tema' => $blog->tema,
+                'slug' => $blog->slug,
                 'contenido' => $blog->contenido,
                 'imagenes' => $blog->imagenes, // Array de imágenes
                 'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
@@ -249,6 +263,7 @@ class BlogController extends Controller
                     return [
                         'idBlog' => $blog->idBlog,
                         'tema' => $blog->tema,
+                        'slug' => $blog->slug,
                         'contenido' => Str::limit($blog->contenido, 150),
                         'imagenes' => $blog->imagenes, // Array de imágenes
                         'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad

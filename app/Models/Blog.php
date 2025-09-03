@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Blog extends Model
 {
@@ -18,6 +19,7 @@ class Blog extends Model
     protected $fillable = [
         'idCategoria',
         'tema',
+        'slug',
         'contenido',
         'imagenes',
         'idPsicologo',
@@ -26,6 +28,90 @@ class Blog extends Model
     protected $casts = [
         'imagenes' => 'array',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($blog) {
+            if (empty($blog->slug)) {
+                $blog->slug = $blog->generateSlug($blog->tema);
+            }
+        });
+
+        static::updating(function ($blog) {
+            if ($blog->isDirty('tema') && empty($blog->slug)) {
+                $blog->slug = $blog->generateSlug($blog->tema);
+            }
+        });
+    }
+
+    /**
+     * Generar slug único basado en el tema
+     */
+    public function generateSlug(string $title): string
+    {
+        $baseSlug = $this->createSlugFromTitle($title);
+        return $this->ensureUniqueSlug($baseSlug);
+    }
+
+    /**
+     * Crear slug desde el título
+     */
+    private function createSlugFromTitle(string $title): string
+    {
+        // Convertir a minúsculas
+        $slug = Str::lower($title);
+
+        // Reemplazar caracteres especiales del español
+        $slug = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', 'ç'],
+            ['a', 'e', 'i', 'o', 'u', 'n', 'u', 'c'],
+            $slug
+        );
+
+        // Eliminar caracteres que no sean letras, números, espacios o guiones
+        $slug = preg_replace('/[^\w\s-]/', '', $slug);
+
+        // Reemplazar espacios múltiples con uno solo
+        $slug = preg_replace('/\s+/', ' ', $slug);
+
+        // Reemplazar espacios con guiones
+        $slug = str_replace(' ', '-', $slug);
+
+        // Eliminar guiones múltiples
+        $slug = preg_replace('/-+/', '-', $slug);
+
+        // Eliminar guiones al inicio y final
+        $slug = trim($slug, '-');
+
+        // Limitar longitud
+        return Str::limit($slug, 100, '');
+    }
+
+    /**
+     * Asegurar que el slug sea único
+     */
+    private function ensureUniqueSlug(string $baseSlug): string
+    {
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)->where('idBlog', '!=', $this->idBlog ?? 0)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Buscar blog por slug
+     */
+    public static function findBySlug(string $slug)
+    {
+        return static::where('slug', $slug)->first();
+    }
 
     public function psicologo(): BelongsTo
     {
