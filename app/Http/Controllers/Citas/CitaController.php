@@ -555,6 +555,7 @@ class CitaController extends Controller
                 ? Carbon::parse($cita->paciente->fecha_nacimiento)->age
                 : null,
             'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
+            "fecha_limite" => "{$cita->fecha_limite}",
             'duracion' => "{$cita->duracion} min.",
             'jitsi_url' => "{$cita->jitsi_url}"
         ];
