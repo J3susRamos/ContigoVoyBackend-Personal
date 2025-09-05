@@ -28,17 +28,18 @@ class BoucherController extends Controller
         try {
             $userId = Auth::id();
 
-            $paciente = Paciente::where('user_id', Auth::id())->first();
+            $paciente = Paciente::where('user_id', $userId)->first();
 
             if (!$paciente) {
                 Log::error("No se encontró paciente con user_id: " . Auth::id());
                 return response()->json(['message' => 'Paciente no encontrado.'], 404);
             }
 
-            Log::info("Usuario autenticadoaaa: $userId, ID del paciente: {$paciente->idPaciente}");
+            $hoy = now()->toDateString();
 
             $cita = Cita::where('idCita', $request->idCita)
                 ->where('idPaciente', $paciente->idPaciente)
+                ->whereDate('fecha_limite', '>=', $hoy)
                 ->where('estado_Cita', 'Sin pagar')
                 ->first();
 
