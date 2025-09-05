@@ -27,6 +27,33 @@ class CitaController extends Controller
             $psicologo = Psicologo::where('user_id', $userId)->first();
 
             $data = $request->validated();
+
+            $fechaHoy = Carbon::today();
+            $fechaCita = Carbon::parse($request->fecha_cita);
+            $fechaLimite = Carbon::parse($request->fecha_limite);
+
+            if ($fechaCita->lte($fechaHoy)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'La fecha de la cita debe ser después de hoy.'
+                ], 422);
+            }
+
+            if ($fechaLimite->lte($fechaHoy)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'La fecha límite de la cita debe ser después de hoy.'
+                ], 422);
+            }
+
+            if ($fechaLimite->gte($fechaCita)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'La fecha límite no puede ser luego a hoy.'
+                ], 422);
+            }
+
+            
             $data['idPsicologo'] = $psicologo->idPsicologo;
 
             Log::info('Datos recibidos en la solicitud: ', $data);
@@ -814,7 +841,7 @@ class CitaController extends Controller
                 ], 404);
             }
 
-            $conteo = Cita::where('idPaciente', $paciente->id)
+            $conteo = Cita::where('idPaciente', $paciente->idPaciente)
                 ->select('estado_Cita', DB::raw('count(*) as total'))
                 ->groupBy('estado_Cita')
                 ->pluck('total', 'estado_Cita');
