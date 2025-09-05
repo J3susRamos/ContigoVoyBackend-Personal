@@ -35,7 +35,7 @@ class CancelarCitasSinPagar extends Command
             ->get();
 
         foreach ($citas as $cita) {
-            $cita->estado_Cita = 'Cancelado';
+            $cita->estado_Cita = 'Cancelada';
             $cita->save();
         }
 
