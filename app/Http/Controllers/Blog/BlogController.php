@@ -104,7 +104,7 @@ class BlogController extends Controller
     public function showbyIdBlog($identifier): JsonResponse
     {
         try {
-            // Intentar buscar por ID numérico primero, luego por slug
+            // Intentar buscar por ID numérico primero, luego por slug, luego por tema
             $blog = null;
 
             if (is_numeric($identifier)) {
@@ -114,6 +114,20 @@ class BlogController extends Controller
             // Si no se encuentra por ID o no es numérico, buscar por slug
             if (!$blog) {
                 $blog = Blog::with(['categoria', 'psicologo.users'])->where('slug', $identifier)->first();
+            }
+
+            // Si no se encuentra por slug, buscar por tema exacto
+            if (!$blog) {
+                $blog = Blog::with(['categoria', 'psicologo.users'])->where('tema', $identifier)->first();
+            }
+
+            // Si no se encuentra por tema exacto, buscar por tema similar (búsqueda flexible)
+            if (!$blog) {
+                // Convertir guiones a espacios para búsqueda más flexible
+                $searchTerm = str_replace('-', ' ', $identifier);
+                $blog = Blog::with(['categoria', 'psicologo.users'])
+                    ->where('tema', 'LIKE', '%' . $searchTerm . '%')
+                    ->first();
             }
 
             if (!$blog) {
@@ -134,6 +148,46 @@ class BlogController extends Controller
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
                 'idCategoria'=> $blog->categoria->idCategoria,
                 'idPsicologo' => $blog->idPsicologo, // Agregamos el ID del psicólogo
+                'categoria' =>  $blog->categoria->nombre,
+                'fecha' => $blog->fecha_publicado,
+            ];
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Blog obtenido correctamente', $responseData)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Ocurrió un problema al obtener el blog: ' . $e->getMessage())
+                ->send();
+        }
+    }
+
+    /**
+     * Método optimizado para obtener blog solo por ID (para la nueva estructura de URL)
+     */
+    public function showByIdOnly(int $id): JsonResponse
+    {
+        try {
+            $blog = Blog::with(['categoria', 'psicologo.users'])->find($id);
+
+            if (!$blog) {
+                return HttpResponseHelper::make()
+                    ->notFoundResponse('El blog no fue encontrado')
+                    ->send();
+            }
+
+            $responseData = [
+                'idBlog' => $blog->idBlog,
+                'tema' => $blog->tema,
+                'slug' => $blog->slug,
+                'contenido' => $blog->contenido,
+                'imagenes' => $blog->imagenes, // Array de imágenes
+                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
+                'psicologo' => $blog->psicologo?->users?->name,
+                'psicologApellido' => $blog->psicologo?->users?->apellido,
+                'psicologoImagenId' => $blog->psicologo?->users->imagen,
+                'idCategoria'=> $blog->categoria->idCategoria,
+                'idPsicologo' => $blog->idPsicologo,
                 'categoria' =>  $blog->categoria->nombre,
                 'fecha' => $blog->fecha_publicado,
             ];
