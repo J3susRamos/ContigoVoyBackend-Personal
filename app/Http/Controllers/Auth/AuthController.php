@@ -15,42 +15,44 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    private array $adminRoles = ['ADMIN','ADMINISTRADOR', 'COMUNICACION', 'MARKETING'];
+
     public function login(PostAuth $request): JsonResponse
     {
         try {
             $user = User::where('email', $request->email)->first();
 
-            if ($user->rol === 'PACIENTE') {
+            if (!$user) {
+                return HttpResponseHelper::make()
+                    ->unauthorizedResponse('El correo electrónico no está registrado.');
+            }
 
+            if (!Hash::check($request->password, $user->password)) {
+                return HttpResponseHelper::make()
+                    ->unauthorizedResponse('La contraseña es incorrecta.');
+            }
+
+            if ($user->rol === 'PACIENTE') {
                 $paciente = Paciente::where('user_id', $user->user_id)->first();
 
                 if (!$paciente || !$paciente->activo) {
                     Auth::logout();
                     return response()->json(['error' => 'Paciente inhabilitado'], 403);
                 }
-            }
-
-            if ($user->rol === 'PSICOLOGO') {
-
+            } 
+            elseif ($user->rol === 'PSICOLOGO') {
                 $psicologo = Psicologo::where('user_id', $user->user_id)->first();
 
                 if (!$psicologo || $psicologo->estado === 'I') {
                     Auth::logout();
                     return response()->json(['error' => 'Psicologo inhabilitado'], 403);
                 }
-                
+            }
+            elseif (!in_array($user->rol, $this->adminRoles)) {
+                Auth::logout();
+                return response()->json(['error' => 'Rol no válido'], 403);
             }
 
-            if (!$user) {
-                return HttpResponseHelper::make()
-                    ->unauthorizedResponse('El correo electrónico no está registrado.');
-
-            }
-            if (!Hash::check($request->password, $user->password)) {
-                return HttpResponseHelper::make()
-                    ->unauthorizedResponse('La contraseña es incorrecta.');
-
-            }
             $token = $user->createToken('token')->plainTextToken;
             $responseData = [
                 'token' => $token,
@@ -59,28 +61,28 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'id' => $user->user_id,
                 'rol' => $user->rol,
-                'imagen'=>$user->imagen
+                'imagen' => $user->imagen,
+                'isAdmin' => in_array($user->rol, $this->adminRoles)
             ];
 
             if ($user->rol === 'PSICOLOGO') {
                 $psicologo = Psicologo::where('user_id', $user->user_id)->first();
-
                 if ($psicologo) {
-                    $responseData['idpsicologo'] = $psicologo->idPsicologo; // Opcional: mantenerlo también en otro campo si quieres
+                    $responseData['idpsicologo'] = $psicologo->idPsicologo;
                 } else {
-                    Log::warning("Usuario con rol PSICOLOGO no tiene registro en tabla psicologos. User ID: " . $user->id);
+                    Log::warning("Usuario con rol PSICOLOGO no tiene registro en tabla psicologos. User ID: " . $user->user_id);
                 }
             }
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Inicio de sesión exitoso.', $responseData)
                 ->send();
+
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
-
                 ->internalErrorResponse(
-                    'Hubo un problema al procesar la solicitud.' .
-                        $e->getMessage()
+                    'Hubo un problema al procesar la solicitud.' . 
+                    $e->getMessage()
                 )
                 ->send();
         }
