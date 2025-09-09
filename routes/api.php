@@ -165,43 +165,33 @@ Route::controller(CategoriaController::class)
         );
     });
 
-Route::controller(CitaController::class)
-    ->prefix("citas")
-    ->group(function () {
-        Route::get("/sin-pagar", "listunpaid"); // Nueva ruta para listar citas sin pagar
-        Route::get("/pendientes/{id}", "showCitasPendientes");
-        Route::get("/estadisticas", "getCitasPorEstado");
-        Route::get("/periodo", "getCitasPorPeriodo");
-        Route::post("/cancelar-sin-pago", "cancelarCitasNoPagadas");
-        Route::group(
-            ["middleware" => ["auth:sanctum", "role:PSICOLOGO|PACIENTE"]],
-            function () {
-                Route::get("/enlaces", "listarCitasPaciente");
-                Route::get("/paciente/{id}", "getCitaVouchers");
-                Route::get("/contador", "estadisticas"); //contador de estados por citas
-            },
-        );
-        Route::group(
-            ["middleware" => ["auth:sanctum", "role:PSICOLOGO"]],
-            function () {
-                Route::get("/periodosmensuales", "getCitasPorPeriodoPsicologo");
-                Route::get("/dashboard/psicologo", "psicologoDashboard");
-                Route::get("/lista", "showAllCitasByPsicologo");
-                Route::post("/", "createCita");
-                Route::get("/{id}", "showCitaById");
-                Route::put("/{id}", "updateCita");
-                Route::delete("/{id}", "destroyCita");
-                Route::post("/realizada", "citaRealizada");
-            },
-        );
-        Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN"]],
-            function () {
-                Route::post("/habilitar-boucher", "aceptarBoucher"); // ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
-                Route::post("/rechazar", "rechazarBoucher");
-            },
-        );
+Route::controller(CitaController::class)->prefix('citas')->group(function () {
+    Route::get('/sin-pagar', 'listunpaid'); // Nueva ruta para listar citas sin pagar
+    Route::get('/pendientes/{id}', 'showCitasPendientes');
+    Route::get('/estadisticas', 'getCitasPorEstado');
+    Route::get('/periodo', 'getCitasPorPeriodo');
+    Route::post('/cancelar-sin-pago', 'cancelarCitasNoPagadas');
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
+        Route::get('/enlaces','listarCitasPaciente');
+        Route::get('/paciente/{id}','getCitaVouchers');
+        Route::get('/contador','estadisticas');//contador de estados por citas
+        Route::get('/paciente/{id}','getCitaVouchers');
     });
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
+        Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
+        Route::get('/dashboard/psicologo', 'psicologoDashboard');
+        Route::get('/lista', 'showAllCitasByPsicologo');
+        Route::post('/', 'createCita');
+        Route::get('/{id}', 'showCitaById');
+        Route::put('/{id}', 'updateCita');
+        Route::delete('/{id}', 'destroyCita');
+        Route::post('/realizada', 'citaRealizada');
+    });
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+        Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
+        Route::post('/rechazar', 'rechazarBoucher'); //no existe todavia, que Aldo su hombre del backend de Sandro lo cree.
+    });
+});
 
 Route::controller(RespuestaComentarioController::class)
     ->prefix("respuestas")
