@@ -111,6 +111,8 @@ Route::controller(BlogController::class)
     ->prefix("blogs")
     ->group(function () {
         Route::get("/authors", "showAllAuthors");
+        Route::get("/id/{id}", "showByIdOnly")->where('id', '[0-9]+'); // Nueva ruta específica para IDs
+        Route::get("/tema/{tema}", "showbyIdBlog"); // Nueva ruta específica para búsqueda por tema
         Route::get("/{identifier}", "showbyIdBlog"); // Acepta tanto ID como slug
         Route::get("/all", "showAllBlogs");
         Route::get("/", "BlogAllPreviews");
@@ -170,12 +172,12 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
-    Route::post('/cancelar-sin-pago', 'cancelarCitasNoPagadas');
+    Route::get('/listar-canceladas', 'listarCitasCanceladas');
+    Route::post('/cancelar-citas', 'cancelarCitasVencidas');
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
         Route::get('/enlaces','listarCitasPaciente');
         Route::get('/paciente/{id}','getCitaVouchers');
         Route::get('/contador','estadisticas');//contador de estados por citas
-        Route::get('/paciente/{id}','getCitaVouchers');
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
         Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
@@ -189,7 +191,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
-        Route::post('/rechazar', 'rechazarBoucher'); //no existe todavia, que Aldo su hombre del backend de Sandro lo cree.
+        Route::post('/rechazar', 'rechazarBoucher'); 
     });
 });
 

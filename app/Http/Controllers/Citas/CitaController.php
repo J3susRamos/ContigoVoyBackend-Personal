@@ -27,6 +27,33 @@ class CitaController extends Controller
             $psicologo = Psicologo::where('user_id', $userId)->first();
 
             $data = $request->validated();
+
+            $fechaHoy = Carbon::today();
+            $fechaCita = Carbon::parse($request->fecha_cita);
+            $fechaLimite = Carbon::parse($request->fecha_limite);
+
+            if ($fechaCita->lte($fechaHoy)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'La fecha de la cita debe ser después de hoy.'
+                ], 422);
+            }
+
+            if ($fechaLimite->lte($fechaHoy)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'La fecha límite de la cita debe ser después de hoy.'
+                ], 422);
+            }
+
+            if ($fechaLimite->gte($fechaCita)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'La fecha límite no puede ser luego a hoy.'
+                ], 422);
+            }
+
+            
             $data['idPsicologo'] = $psicologo->idPsicologo;
 
             Log::info('Datos recibidos en la solicitud: ', $data);
@@ -271,17 +298,18 @@ class CitaController extends Controller
         }
     }
 
-    public function rechazarBoucher(request $request){
+    public function rechazarBoucher(request $request)
+    {
         $request->validate([
             'codigo' => 'required|exists:boucher,codigo',
         ]);
 
         try {
             $userId = Auth::id();
-            
+
             $codigo = $request->input('codigo');
 
-             if (!$codigo) {
+            if (!$codigo) {
                 return response()->json([
                     'status_code' => 500,
                     'status_message' => 'Internal serve',
@@ -304,7 +332,6 @@ class CitaController extends Controller
                 'message' => 'Boucher cancelado correctamente.',
                 'boucher' => $boucher
             ], 200);
-
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Error al cancelar el boucher.',
@@ -313,7 +340,8 @@ class CitaController extends Controller
         }
     }
 
-    public function listarCitasPaciente(Request $request){
+    public function listarCitasPaciente(Request $request)
+    {
         try {
             $userId = Auth::id();
 
@@ -351,7 +379,7 @@ class CitaController extends Controller
             }
 
             if ($estadoBoucher) {
-                $citasQuery->whereHas('boucher', function($q) use ($estadoBoucher) {
+                $citasQuery->whereHas('boucher', function ($q) use ($estadoBoucher) {
                     $q->where('estado', $estadoBoucher);
                 });
             }
@@ -359,13 +387,13 @@ class CitaController extends Controller
             $citas = $citasQuery->paginate($perPage);
 
             $citas->getCollection()->transform(function ($cita) {
-                $citaArray = $cita->toArray(); 
+                $citaArray = $cita->toArray();
 
                 $citaArray['idPsicologo'] = $cita->psicologo?->idPsicologo ?? null;
                 $citaArray['nombrePsicologo'] = $cita->psicologo?->users?->name ?? null;
                 $citaArray['apellidoPsicologo'] = $cita->psicologo?->users?->apellido ?? null;
 
-                $citaArray['boucher'] = $cita->boucher ? [ 'idBoucher' => $cita->boucher->idBoucher, 'codigo' => $cita->boucher->codigo, 'estado' => $cita->boucher->estado, ] : null;
+                $citaArray['boucher'] = $cita->boucher ? ['idBoucher' => $cita->boucher->idBoucher, 'codigo' => $cita->boucher->codigo, 'estado' => $cita->boucher->estado,] : null;
 
                 return $citaArray;
             });
@@ -377,7 +405,6 @@ class CitaController extends Controller
                 'citas' => $citas,
                 'errorBag' => []
             ], 200);
-
         } catch (Exception $e) {
             return response()->json([
                 'status_code' => 500,
@@ -528,6 +555,7 @@ class CitaController extends Controller
                 ? Carbon::parse($cita->paciente->fecha_nacimiento)->age
                 : null,
             'fecha_inicio' => "{$cita->fecha_cita} {$cita->hora_cita}",
+            "fecha_limite" => "{$cita->fecha_limite}",
             'duracion' => "{$cita->duracion} min.",
             'jitsi_url' => "{$cita->jitsi_url}"
         ];
@@ -535,7 +563,7 @@ class CitaController extends Controller
 
     public function getCitaVouchers(int $id)
     {
-        try{
+        try {
 
             $userId = Auth::id();
             $paciente = Paciente::where('user_id', $userId)->first();
@@ -549,8 +577,8 @@ class CitaController extends Controller
                 ], 404);
             }
 
-            $cita = Cita::where("idCita",$id)->first();
-            if(!$cita){
+            $cita = Cita::where("idCita", $id)->first();
+            if (!$cita) {
                 return response()->json([
                     'status_code' => 404,
                     'status_message' => 'Not Found',
@@ -561,7 +589,7 @@ class CitaController extends Controller
             }
 
             //Cambiar para que los administradores tambien puedan obtener cualquier cita
-            if($cita->idPaciente != $paciente->idPaciente){
+            if ($cita->idPaciente != $paciente->idPaciente) {
                 return response()->json([
                     'status_code' => 403,
                     'status_message' => 'Forbidden',
@@ -580,9 +608,7 @@ class CitaController extends Controller
                 'citas' => $bouchersCitas,
                 'errorBag' => []
             ], 200);
-
-
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status_code' => 500,
                 'status_message' => 'Internal Server Error',
@@ -814,7 +840,7 @@ class CitaController extends Controller
                 ], 404);
             }
 
-            $conteo = Cita::where('idPaciente', $paciente->id)
+            $conteo = Cita::where('idPaciente', $paciente->idPaciente)
                 ->select('estado_Cita', DB::raw('count(*) as total'))
                 ->groupBy('estado_Cita')
                 ->pluck('total', 'estado_Cita');
@@ -831,11 +857,9 @@ class CitaController extends Controller
         }
     }
 
-    public function cancelarCita(Request $request)
+    public function cancelarCitasVencidas(Request $request)
     {
         try {
-            $userId = Auth::id();
-
             $estado = $request->input('estado');
 
             if (!$estado || strtolower($estado) !== 'sin pagar') {
@@ -853,25 +877,42 @@ class CitaController extends Controller
                 ->get();
 
             foreach ($citasSinPagarVencidas as $cita) {
-                $cita->estado_Cita = 'Cancelado';
+                $cita->estado_Cita = 'Cancelada';
                 $cita->save();
             }
-
-            $citasCanceladas = Cita::where('estado_Cita', 'Cancelado')->get();
 
             return response()->json([
                 'status_code' => 200,
                 'status_message' => 'OK',
-                'description' => 'Citas vencidas canceladas correctamente. Se listan todas las citas canceladas.',
+                'description' => 'Citas vencidas canceladas correctamente.',
                 'citas_canceladas_ahora' => $citasSinPagarVencidas,
-                'todas_las_citas_canceladas' => $citasCanceladas,
             ], 200);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'status_code' => 500,
                 'status_message' => 'Internal Server Error',
                 'description' => 'Error al cancelar las citas',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function listarCitasCanceladas()
+    {
+        try {
+            $citasCanceladas = Cita::where('estado_Cita', 'Cancelada')->get();
+
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Listado de todas las citas canceladas.',
+                'citas_canceladas' => $citasCanceladas,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Error al obtener las citas canceladas',
                 'message' => $e->getMessage()
             ], 500);
         }

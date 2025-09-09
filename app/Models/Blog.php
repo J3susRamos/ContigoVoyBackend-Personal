@@ -40,8 +40,16 @@ class Blog extends Model
         });
 
         static::updating(function ($blog) {
-            if ($blog->isDirty('tema') && empty($blog->slug)) {
-                $blog->slug = $blog->generateSlug($blog->tema);
+            // Solo regenerar slug si el título cambió Y no hay un slug personalizado
+            if ($blog->isDirty('tema')) {
+                $currentSlug = $blog->getOriginal('slug');
+                $expectedSlug = $blog->createSlugFromTitle($blog->getOriginal('tema'));
+
+                // Solo regenerar slug si el slug actual coincide con el slug auto-generado anterior
+                // Esto permite slugs personalizados
+                if ($currentSlug === $expectedSlug || empty($currentSlug)) {
+                    $blog->slug = $blog->generateSlug($blog->tema);
+                }
             }
         });
     }
