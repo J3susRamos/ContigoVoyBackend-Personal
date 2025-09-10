@@ -539,6 +539,115 @@ class PacienteController extends Controller
         }
     }
 
+
+    //metodo agregado para pacientes habilitados
+
+    public function showPacientesHabilitados(Request $request)
+{
+    try {
+
+        $shouldPaginate = $request->query("paginate", false);
+        $perPage = $request->query("per_page", 10);
+
+        // Cambiar el filtro para pacientes habilitados (activo = 1)
+        $query = Paciente::where("activo", 1);
+
+        // Filtrar por género
+        if ($request->filled("genero")) {
+            $generos = explode(",", $request->query("genero"));
+            $query->whereIn("genero", $generos);
+        }
+
+        // Filtrar por edad (espera "10 - 20,30 - 40")
+        if ($request->filled("edad")) {
+            $rangosEdad = explode(",", $request->query("edad"));
+            $query->where(function ($q) use ($rangosEdad) {
+                foreach ($rangosEdad as $rango) {
+                    [$min, $max] = array_map(
+                        "intval",
+                        explode(" - ", $rango)
+                    );
+                    $q->orWhereBetween("fecha_nacimiento", [
+                        now()->subYears($max)->startOfDay(),
+                        now()->subYears($min)->endOfDay(),
+                    ]);
+                }
+            });
+        }
+
+        // Filtrar por fecha de la última cita
+        if (
+            $request->filled("fecha_inicio") &&
+            $request->filled("fecha_fin")
+        ) {
+            $fechaInicio = $request->query("fecha_inicio");
+            $fechaFin = $request->query("fecha_fin");
+
+            $query->whereHas("citas", function ($q) use (
+                $fechaInicio,
+                $fechaFin
+            ) {
+                $q->whereBetween("fecha_cita", [$fechaInicio, $fechaFin]);
+            });
+        }
+
+        // Filtrar por nombre
+        if ($request->filled("nombre")) {
+            $nombre = $request->query("nombre");
+            $query->where(function ($q) use ($nombre) {
+                $q->where("nombre", "like", "%{$nombre}%")->orWhere(
+                    "apellido",
+                    "like",
+                    "%{$nombre}%"
+                );
+            });
+        }
+
+        if ($shouldPaginate) {
+            $pacientesPaginator = $query->paginate($perPage);
+            $data = $pacientesPaginator
+                ->getCollection()
+                ->map(function ($paciente) {
+                    return $this->mapPaciente($paciente);
+                });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse("Pacientes habilitados obtenidos correctamente", [
+                    "data" => $data,
+                    "pagination" => [
+                        "current_page" => $pacientesPaginator->currentPage(),
+                        "last_page" => $pacientesPaginator->lastPage(),
+                        "per_page" => $pacientesPaginator->perPage(),
+                        "total" => $pacientesPaginator->total(),
+                    ],
+                ])
+                ->send();
+        } else {
+            $pacientes = $query->get();
+            $data = $pacientes->map(function ($paciente) {
+                return $this->mapPaciente($paciente);
+            });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse(
+                    "Pacientes habilitados obtenidos correctamente",
+                    $data
+                )
+                ->send();
+        }
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse(
+                "Ocurrió un problema al procesar la solicitud. " .
+                    $e->getMessage()
+            )
+            ->send();
+    }
+}
+
+
+
+
     private function mapPaciente($paciente)
     {
         $ultimaCita = $paciente->citas->first();
