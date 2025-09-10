@@ -83,6 +83,8 @@ class BoucherController extends Controller
                 return response()->json(['message' => 'Paciente no encontrado.'], 404);
             }
 
+            $perPage = $request->query('per_page', 10);
+
             Log::info("Usuario autenticado: $userId, ID del paciente: {$paciente->idPaciente}");
 
             $query = DB::table('boucher')
@@ -105,11 +107,20 @@ class BoucherController extends Controller
                 ]);
             }
 
-            $bouchers = $query->paginate(10);
+            $query->orderBy('boucher.created_at', 'desc');
+
+            $bouchers = $query->paginate($perPage);
 
             Log::info('Bouchers con join: ' . count($bouchers));
 
-            return response()->json(['bouchers' => $bouchers], 200);
+            return response()->json([
+                'status_code' => 200,
+                'status_message' => 'OK',
+                'description' => 'Bouchers del paciente obtenidas correctamente.',
+                'bouchers' => $bouchers,
+                'errorBag' => []
+            ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'message' => 'Error al obtener los bouchers.',
