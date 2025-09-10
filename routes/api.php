@@ -60,31 +60,26 @@ Route::controller(PacienteController::class)
         Route::post("/enviar-codigo", "resetPassword");
         Route::post("/verificar-codigo", "verificarCodigo");
 
-        Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
-            function () {
-                Route::put("/activar/{id}", "enablePatient"); // Nueva ruta para activar paciente y vincular con psicologo
-                Route::get("/deshabilitados", "showEnablePaciente"); // Listar pacientes inactivos para el ADMIN
-            },
-        );
-        //Endpoint para que sandro se consuma
-        Route::get("/todos", "getAllPacientes");
-        Route::group(
-            ["middleware" => ["auth:sanctum", "role:PSICOLOGO"]],
-            function () {
-                Route::post("/{idCita?}", "createPaciente");
-                Route::get("/{id}", "showPacienteById");
-                Route::get("/", "showPacientesByPsicologo"); // Listar pacientes activos por psicólogo
-                Route::put("/{id}", "updatePaciente");
-                Route::put("/desactivar/{id}", "disablePatient"); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
-                Route::delete("/{id}", "destroyPaciente");
-                Route::get("/citas/{id}", "getCitasPaciente");
-                Route::get("/estadisticas/genero", "getPacientesGenero");
-                Route::get("/estadisticas/edad", "getPacientesEdad");
-                Route::get("/estadisticas/lugar", "getPacientesLugar");
-            },
-        );
+    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+        Route::put('/activar/{id}', 'enablePatient'); // Nueva ruta para activar paciente y vincular con psicologo
+        Route::get('/deshabilitados', 'showEnablePaciente'); // Listar pacientes inactivos para el ADMIN
+        Route::get('/habilitados', 'showPacientesHabilitados'); // NUEVA RUTA para pacientes habilitados
     });
+    //Endpoint para que sandro se consuma
+    Route::get('/todos', 'getAllPacientes');
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
+        Route::post('/{idCita?}', 'createPaciente');
+        Route::get('/{id}', 'showPacienteById');
+        Route::get('/', 'showPacientesByPsicologo'); // Listar pacientes activos por psicólogo
+        Route::put('/{id}', 'updatePaciente');
+        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
+        Route::delete('/{id}', 'destroyPaciente');
+        Route::get('/citas/{id}', 'getCitasPaciente');
+        Route::get('/estadisticas/genero', 'getPacientesGenero');
+        Route::get('/estadisticas/edad', 'getPacientesEdad');
+        Route::get('/estadisticas/lugar', 'getPacientesLugar');
+    });
+});
 
 Route::controller(PsicologosController::class)
     ->prefix("psicologos")
