@@ -121,7 +121,7 @@ class CitaController extends Controller
                         ->where("estado", "aceptado");
                 },
             ])
-                ->whereNotIn("estado_Cita", ["Sin pagar", "Cancelada"])
+                ->whereNotIn("estado_Cita", ["Sin pagar", "Cancelada", "Reprogramada"])
                 ->get();
 
             $result = $citas->map(function ($cita) {
@@ -195,6 +195,8 @@ class CitaController extends Controller
     public function listunpaid(Request $request)
     {
         try {
+            $userId = Auth::id();
+
             $citas = Cita::with([
                 "paciente:idPaciente,nombre,apellido,celular",
                 "psicologo" => function ($query) {
