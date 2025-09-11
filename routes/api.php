@@ -105,12 +105,14 @@ Route::controller(PsicologosController::class)
 Route::controller(BlogController::class)
     ->prefix("blogs")
     ->group(function () {
+        // Rutas específicas primero
         Route::get("/authors", "showAllAuthors");
-        Route::get("/id/{id}", "showByIdOnly")->where("id", "[0-9]+"); // Nueva ruta específica para IDs
-        Route::get("/tema/{tema}", "showbyIdBlog"); // Nueva ruta específica para búsqueda por tema
-        Route::get("/{identifier}", "showbyIdBlog"); // Acepta tanto ID como slug
         Route::get("/all", "showAllBlogs");
         Route::get("/", "BlogAllPreviews");
+        Route::get("/id/{id}", "showByIdOnly")->where("id", "[0-9]+"); // Nueva ruta específica para IDs
+        Route::get("/tema/{tema}", "showbyIdBlog"); // Nueva ruta específica para búsqueda por tema
+        // Ruta general al final
+        Route::get("/{identifier}", "showbyIdBlog"); // Acepta tanto ID como slug
 
         Route::group(
             ["middleware" => ["auth:sanctum", "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION"]],
@@ -163,8 +165,8 @@ Route::controller(CategoriaController::class)
     });
 
 Route::controller(CitaController::class)->prefix('citas')->group(function () {
-    
-    
+
+
     Route::get('/pendientes/{id}', 'showCitasPendientes');
     Route::get('/estadisticas', 'getCitasPorEstado');
     Route::get('/periodo', 'getCitasPorPeriodo');
@@ -178,7 +180,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
     });
     Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
         Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
-        Route::post('/rechazar', 'rechazarBoucher'); 
+        Route::post('/rechazar', 'rechazarBoucher');
         Route::get('/sin-pagar', 'listunpaid'); // Nueva ruta para listar citas sin pagar
         Route::get('/pagadas','listpaid');
     });
@@ -192,7 +194,7 @@ Route::controller(CitaController::class)->prefix('citas')->group(function () {
         Route::delete('/{id}', 'destroyCita');
         Route::post('/realizada', 'citaRealizada');
     });
-    
+
 });
 
 Route::controller(RespuestaComentarioController::class)
