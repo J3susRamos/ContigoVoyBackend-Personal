@@ -72,12 +72,15 @@ Route::controller(PacienteController::class)
         Route::get('/{id}', 'showPacienteById');
         Route::get('/', 'showPacientesByPsicologo'); // Listar pacientes activos por psicólogo
         Route::put('/{id}', 'updatePaciente');
-        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
         Route::delete('/{id}', 'destroyPaciente');
         Route::get('/citas/{id}', 'getCitasPaciente');
         Route::get('/estadisticas/genero', 'getPacientesGenero');
         Route::get('/estadisticas/edad', 'getPacientesEdad');
         Route::get('/estadisticas/lugar', 'getPacientesLugar');
+    });
+
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|ADMIN']], function () {
+        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
     });
 });
 
