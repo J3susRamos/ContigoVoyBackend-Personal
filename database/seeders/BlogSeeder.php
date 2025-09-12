@@ -6,6 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Blog;
 use App\Models\Psicologo;
+use Illuminate\Support\Str;
 
 class BlogSeeder extends Seeder
 {
@@ -38,6 +39,10 @@ class BlogSeeder extends Seeder
                 'idPsicologo' => 1 
             ]
         ];
+
+        foreach ($blogs as &$blog) {
+            $blog['slug'] = Str::slug($blog['tema']);
+        }
 
         Blog::insert($blogs);
     }
