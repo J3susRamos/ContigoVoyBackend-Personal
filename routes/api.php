@@ -21,6 +21,13 @@ use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\Boucher\BoucherController;
 use App\Http\Controllers\Personal\PersonalController;
 use App\Http\Controllers\Disponibilidad\DisponibilidadController;
+use App\Http\Controllers\User\UserController;
+
+Route::controller(UserController::class)
+    ->prefix("users")
+    ->group(function () {
+        Route::get("/get", "getUsersByRole");
+    });
 
 Route::controller(AuthController::class)
     ->prefix("auth")
