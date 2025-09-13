@@ -43,7 +43,7 @@ class AuthController extends Controller
             elseif ($user->rol === 'PSICOLOGO') {
                 $psicologo = Psicologo::where('user_id', $user->user_id)->first();
 
-                if (!$psicologo || $psicologo->estado === 'I') {
+                if (!$psicologo || $user->estado === '0') {
                     Auth::logout();
                     return response()->json(['error' => 'Psicologo inhabilitado'], 403);
                 }
