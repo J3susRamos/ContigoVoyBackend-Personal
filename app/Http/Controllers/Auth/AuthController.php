@@ -62,7 +62,8 @@ class AuthController extends Controller
                 'id' => $user->user_id,
                 'rol' => $user->rol,
                 'imagen' => $user->imagen,
-                'isAdmin' => in_array($user->rol, $this->adminRoles)
+                'isAdmin' => in_array($user->rol, $this->adminRoles),
+                'permissions' => $user->permissions()->get(['id_urls as idUrls', 'name_permission as name'])
             ];
 
             if ($user->rol === 'PSICOLOGO') {

@@ -55,7 +55,7 @@ Route::controller(PersonalController::class)
         Route::group(
             ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
             function () {
-                Route::post("/", "createPersonal");
+                Route::post("/", "createPersonal"); // crear personal
                 Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
             },
         );
