@@ -11,26 +11,43 @@ use App\Models\Personal;
 use App\Models\PersonalPermission;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use App\Models\User;
 
 class PersonalController extends Controller
 {
-    public function createPersonal(PostPersonal $request): JsonResponse
+    public function createPersonal(Request $request): JsonResponse
     {
         DB::beginTransaction();
+
         try {
-            $userData = $request->all();
-            $userData['password'] = Hash::make($request['password']);
-            $userData['fecha_nacimiento'] = Carbon::createFromFormat('d/m/Y', $userData['fecha_nacimiento'])
+            $userData = $request->only([
+                'name',
+                'apellido',
+                'email',
+                'password',
+                'fecha_nacimiento',
+                'imagen',
+                'rol'
+            ]);
+
+            // Encriptar password
+            $userData['password'] = Hash::make($request->password);
+
+            // Fecha en formato correcto
+            $userData['fecha_nacimiento'] = Carbon::parse($userData['fecha_nacimiento'])
                 ->format('Y-m-d');
 
             // Crear usuario
-            $user = Personal::create($userData);
-            
-            // Guarda permisos en la tablita permissions u.u
+            $user = User::create($userData);
+
+            // Guardar permisos
             if ($request->has('permissions') && is_array($request->permissions)) {
                 foreach ($request->permissions as $perm) {
-                    $user->permissions()->create([
-                        'name_permission' => $perm,
+                    PersonalPermission::create([
+                        'id_user' => $user->user_id,
+                        'id_urls' => $perm['idUrls'],
+                        'name_permission' => $perm['name'] ?? ''
                     ]);
                 }
             }
@@ -38,9 +55,10 @@ class PersonalController extends Controller
             DB::commit();
 
             return HttpResponseHelper::make()
-                ->successfulResponse('Personal creado correctamente')
+                ->successfulResponse('Personal creado correctamente', [
+                    'user_id' => $user->user_id
+                ])
                 ->send();
-
         } catch (\Exception $e) {
             DB::rollBack();
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PostUser\PostUser;
 use App\Traits\HttpResponseHelper;
@@ -33,4 +34,28 @@ class UserController extends Controller
                 ->send();
         }
     }
+
+
+    public function getUsersByRole(Request $request){
+        try {
+            $perPage = $request->query("per_page", 10);
+            $rol = $request->query("rol","PSICOLOGO");
+            $query = User::with([])->where('rol', $rol);
+
+            $paginator = $query->paginate($perPage);
+
+            return HttpResponseHelper::make()
+                ->successfulResponse("Psicólogos obtenidos correctamente", [
+                    "data" => $paginator,
+                ])
+                ->send();
+    
+                
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
+                ->send();
+        }
+    }
+
 }

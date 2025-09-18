@@ -47,4 +47,10 @@ class User extends Authenticatable
      {
          return Carbon::parse($this->fecha_nacimiento)->age;
      }
+
+     public function permissions()
+     {
+        return $this->hasMany(PersonalPermission::class, 'id_user', 'user_id');
+     }
+
 }

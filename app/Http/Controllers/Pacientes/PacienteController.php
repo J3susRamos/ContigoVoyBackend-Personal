@@ -236,7 +236,9 @@ class PacienteController extends Controller
             $paciente = Paciente::findOrFail($id);
 
             $psicologo = PSICOLOGO::where('idPsicologo', $request->idPsicologo)
-                ->where('estado', 'A')
+                ->whereHas('users', function($q){
+                    $q->where("estado",1);
+                })
                 ->first();
 
             if (!$psicologo) {

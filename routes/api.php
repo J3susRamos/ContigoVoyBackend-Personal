@@ -21,6 +21,13 @@ use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\Boucher\BoucherController;
 use App\Http\Controllers\Personal\PersonalController;
 use App\Http\Controllers\Disponibilidad\DisponibilidadController;
+use App\Http\Controllers\User\UserController;
+
+Route::controller(UserController::class)
+    ->prefix("users")
+    ->group(function () {
+        Route::get("/get", "getUsersByRole");
+    });
 
 Route::controller(AuthController::class)
     ->prefix("auth")
@@ -48,7 +55,7 @@ Route::controller(PersonalController::class)
         Route::group(
             ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
             function () {
-                Route::post("/", "createPersonal");
+                Route::post("/", "createPersonal"); // crear personal
                 Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
             },
         );
@@ -72,12 +79,15 @@ Route::controller(PacienteController::class)
         Route::get('/{id}', 'showPacienteById');
         Route::get('/', 'showPacientesByPsicologo'); // Listar pacientes activos por psicólogo
         Route::put('/{id}', 'updatePaciente');
-        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
         Route::delete('/{id}', 'destroyPaciente');
         Route::get('/citas/{id}', 'getCitasPaciente');
         Route::get('/estadisticas/genero', 'getPacientesGenero');
         Route::get('/estadisticas/edad', 'getPacientesEdad');
         Route::get('/estadisticas/lugar', 'getPacientesLugar');
+    });
+
+    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|ADMIN']], function () {
+        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
     });
 });
 
