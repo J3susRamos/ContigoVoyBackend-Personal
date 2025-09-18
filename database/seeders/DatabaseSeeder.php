@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
             PacienteSeeder::class,
             EnfermedadesSeeder::class, 
             CitaSeeder::class,
+            UrlsSeeder::class,
             
         ]);
 
