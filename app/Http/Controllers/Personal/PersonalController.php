@@ -42,8 +42,8 @@ class PersonalController extends Controller
             $user = User::create($userData);
 
             // Guardar permisos
-            if ($request->has('permissions') && is_array($request->permissions)) {
-                foreach ($request->permissions as $perm) {
+            foreach ($request->permissions as $perm) {
+                if (is_array($perm) && isset($perm['idUrls'])) {
                     PersonalPermission::create([
                         'id_user' => $user->user_id,
                         'id_urls' => $perm['idUrls'],
@@ -70,26 +70,24 @@ class PersonalController extends Controller
 
     public function getPersonalWithPermissions(int $user_id): JsonResponse
     {
-    try {
-        $personal = Personal::find($user_id);
+        try {
+            $personal = Personal::find($user_id);
 
-        if (!$personal) {
+            if (!$personal) {
+                return HttpResponseHelper::make()
+                    ->notFoundResponse("El usuario con id {$user_id} no existe.")
+                    ->send();
+            }
+            $permissions = PersonalPermission::where('id_user', $user_id)
+                ->get(['id', 'name_permission', 'id_user']);
+
             return HttpResponseHelper::make()
-                ->notFoundResponse("El usuario con id {$user_id} no existe.")
+                ->successfulResponse("Permisos obtenidos correctamente", $permissions)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse("Ocurrió un error al obtener los permisos. " . $e->getMessage())
                 ->send();
         }
-        $permissions = PersonalPermission::where('id_user', $user_id)
-            ->get(['id', 'name_permission', 'id_user']);
-
-        return HttpResponseHelper::make()
-            ->successfulResponse("Permisos obtenidos correctamente", $permissions)
-            ->send();
-
-    } catch (\Exception $e) {
-        return HttpResponseHelper::make()
-            ->internalErrorResponse("Ocurrió un error al obtener los permisos. " . $e->getMessage())
-            ->send();
     }
-    }   
 }
-
