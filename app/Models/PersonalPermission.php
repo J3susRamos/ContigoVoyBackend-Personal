@@ -14,10 +14,22 @@ class PersonalPermission extends Model
     protected $fillable = [
         'name_permission',
         'id_user',
+        'id_urls',
     ];
 
     public function personal()
     {
         return $this->belongsTo(Personal::class, 'id_user', 'user_id');
     }
+
+    public function urls()
+    {
+        return $this->belongsTo(Urls::class, 'id_urls', 'idUrls');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_user', 'user_id');
+    }
+
 }

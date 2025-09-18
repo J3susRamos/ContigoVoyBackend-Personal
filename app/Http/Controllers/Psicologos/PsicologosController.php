@@ -97,7 +97,9 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'users'])->where('estado', 'A');
+            $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function($q){
+                $q->where("estado",1);
+            });
 
             if ($request->filled("pais")) {
                 $paises = explode(",", $request->query("pais"));
@@ -167,7 +169,9 @@ class PsicologosController extends Controller
     {
         try{
             $psicologos = Psicologo::with('users')
-                ->where('estado', 'A')
+                ->whereHas('users', function($q){
+                $q->where("estado",1);
+                })
                 ->get(['idPsicologo', 'user_id'])
                 ->map(function($psicologo){
                     return [
@@ -192,7 +196,9 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'users'])->where('estado', 'I');
+            $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function($q){
+                $q->where("estado",0);
+            });
 
             if ($request->filled("pais")) {
                 $paises = explode(",", $request->query("pais"));
@@ -410,7 +416,7 @@ class PsicologosController extends Controller
     public function cambiarEstadoPsicologo(int $id): JsonResponse
     {
         try {
-            $psicologo = Psicologo::find($id);
+            $psicologo = Psicologo::with('users')->find($id);
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
@@ -418,12 +424,21 @@ class PsicologosController extends Controller
                     ->send();
             }
 
-            $psicologo->estado = $psicologo->estado === 'I' ? 'A' : 'I';
-            $psicologo->save();
+            if ($psicologo->users) {
+                $psicologo->users->estado = $psicologo->users->estado === '0' ? '1' : '0';
+                $psicologo->users->save();
 
-            return HttpResponseHelper::make()
-                ->successfulResponse('Estado del psicólogo cambiado correctamente a ' . ($psicologo->estado === 'A' ? 'Activo' : 'Inactivo'))
-                ->send();
+                return HttpResponseHelper::make()
+                    ->successfulResponse(
+                        'Estado del usuario del psicólogo cambiado correctamente a ' .
+                        ($psicologo->users->estado === '1' ? 'Activo' : 'Inactivo')
+                    )
+                    ->send();
+            } else {
+                return HttpResponseHelper::make()
+                    ->notFoundResponse('El psicólogo no tiene un usuario asociado.')
+                    ->send();
+            }
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Ocurrió un problema al cambiar el estado del psicólogo: ' . $e->getMessage())

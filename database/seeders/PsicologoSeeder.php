@@ -129,7 +129,6 @@ class PsicologoSeeder extends Seeder
         ];
 
         foreach ($psicologos as $data) {
-            // Crear el usuario y forzar la carga del ID
             $usuario = User::create([
                 'name' => $data['name'],
                 'apellido' => $data['apellido'],
@@ -137,10 +136,10 @@ class PsicologoSeeder extends Seeder
                 'fecha_nacimiento' => $data['fecha_nacimiento'],
                 'imagen' => $data['imagen'],
                 'password' => Hash::make($data['password']),
-                'rol' => 'PSICOLOGO'
+                'rol' => 'PSICOLOGO',
+                'estado' => 1
             ]);
-
-            // Asignar rol
+            
             $usuario->assignRole('PSICOLOGO');
 
             $psicologo = Psicologo::create([
@@ -151,7 +150,6 @@ class PsicologoSeeder extends Seeder
                 'experiencia' => $data['experiencia'],
                 'genero' => $data['genero'],
                 'horario' => $data['horario'],
-                'estado' => 'A'
             ]);
 
             $psicologo->especialidades()->attach([$data['especialidad']]);

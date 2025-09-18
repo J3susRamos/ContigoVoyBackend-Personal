@@ -21,6 +21,13 @@ use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\Boucher\BoucherController;
 use App\Http\Controllers\Personal\PersonalController;
 use App\Http\Controllers\Disponibilidad\DisponibilidadController;
+use App\Http\Controllers\User\UserController;
+
+Route::controller(UserController::class)
+    ->prefix("users")
+    ->group(function () {
+        Route::get("/get", "getUsersByRole");
+    });
 
 Route::controller(AuthController::class)
     ->prefix("auth")
@@ -48,7 +55,7 @@ Route::controller(PersonalController::class)
         Route::group(
             ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
             function () {
-                Route::post("/", "createPersonal");
+                Route::post("/", "createPersonal"); // crear personal
                 Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
             },
         );
