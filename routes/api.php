@@ -22,6 +22,7 @@ use App\Http\Controllers\Boucher\BoucherController;
 use App\Http\Controllers\Personal\PersonalController;
 use App\Http\Controllers\Disponibilidad\DisponibilidadController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\Urls\UrlsController;
 
 Route::controller(UserController::class)
     ->prefix("users")
@@ -42,7 +43,12 @@ Route::controller(ContactosController::class)
         Route::post("/create", "createContact")->middleware("throttle:100,1");
 
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::get("/show", "showAllContact");
             },
@@ -53,10 +59,31 @@ Route::controller(PersonalController::class)
     ->prefix("personal")
     ->group(function () {
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::post("/", "createPersonal"); // crear personal
                 Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
+            },
+        );
+    });
+
+Route::controller(UrlsController::class)
+    ->prefix("urls")
+    ->group(function () {
+        Route::group(
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
+            function () {
+                Route::get("/enlaces", "getUrlsWithEnlace"); // obtener URLs con enlace
             },
         );
     });
@@ -67,35 +94,49 @@ Route::controller(PacienteController::class)
         Route::post("/enviar-codigo", "resetPassword");
         Route::post("/verificar-codigo", "verificarCodigo");
 
-    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
-        Route::put('/activar/{id}', 'enablePatient'); // Nueva ruta para activar paciente y vincular con psicologo
-        Route::get('/deshabilitados', 'showEnablePaciente'); // Listar pacientes inactivos para el ADMIN
-        Route::get('/habilitados', 'showPacientesHabilitados'); // NUEVA RUTA para pacientes habilitados
-    });
-    //Endpoint para que sandro se consuma
-    Route::get('/todos', 'getAllPacientes');
-    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
-        Route::post('/{idCita?}', 'createPaciente');
-        Route::get('/{id}', 'showPacienteById');
-        Route::get('/', 'showPacientesByPsicologo'); // Listar pacientes activos por psicólogo
-        Route::put('/{id}', 'updatePaciente');
-        Route::delete('/{id}', 'destroyPaciente');
-        Route::get('/citas/{id}', 'getCitasPaciente');
-        Route::get('/estadisticas/genero', 'getPacientesGenero');
-        Route::get('/estadisticas/edad', 'getPacientesEdad');
-        Route::get('/estadisticas/lugar', 'getPacientesLugar');
-    });
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:ADMIN"]],
+            function () {
+                Route::put("/activar/{id}", "enablePatient"); // Nueva ruta para activar paciente y vincular con psicologo
+                Route::get("/deshabilitados", "showEnablePaciente"); // Listar pacientes inactivos para el ADMIN
+                Route::get("/habilitados", "showPacientesHabilitados"); // NUEVA RUTA para pacientes habilitados
+            },
+        );
+        //Endpoint para que sandro se consuma
+        Route::get("/todos", "getAllPacientes");
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:PSICOLOGO"]],
+            function () {
+                Route::post("/{idCita?}", "createPaciente");
+                Route::get("/{id}", "showPacienteById");
+                Route::get("/", "showPacientesByPsicologo"); // Listar pacientes activos por psicólogo
+                Route::put("/{id}", "updatePaciente");
+                Route::delete("/{id}", "destroyPaciente");
+                Route::get("/citas/{id}", "getCitasPaciente");
+                Route::get("/estadisticas/genero", "getPacientesGenero");
+                Route::get("/estadisticas/edad", "getPacientesEdad");
+                Route::get("/estadisticas/lugar", "getPacientesLugar");
+            },
+        );
 
-    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|ADMIN']], function () {
-        Route::put('/desactivar/{id}', 'disablePatient'); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:PSICOLOGO|ADMIN"]],
+            function () {
+                Route::put("/desactivar/{id}", "disablePatient"); // Nueva ruta para desactivar paciente y desvincular paciente con psicologo
+            },
+        );
     });
-});
 
 Route::controller(PsicologosController::class)
     ->prefix("psicologos")
     ->group(function () {
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::get("/dashboard", "psicologoDashboard");
                 Route::post("/", "createPsicologo");
@@ -125,7 +166,12 @@ Route::controller(BlogController::class)
         Route::get("/{identifier}", "showbyIdBlog"); // Acepta tanto ID como slug
 
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::get("/psicologo/{idPsicologo}", "showBlogsByPsicologo"); // Nueva ruta
                 Route::post("/", "createBlog");
@@ -141,7 +187,12 @@ Route::controller(ComentarioController::class)
         Route::post("/{id}", "createComentario");
         Route::get("/{id}", "showComentariosByBlog");
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::delete("/{id}", "destroyComentario");
             },
@@ -153,7 +204,12 @@ Route::controller(EspecialidadController::class)
     ->group(function () {
         Route::get("/", "showAll");
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::post("/", "createEspecialidad");
                 Route::put("/{id}", "updateEspecialidad");
@@ -167,52 +223,70 @@ Route::controller(CategoriaController::class)
     ->group(function () {
         Route::get("/", "showAll");
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::post("/", "createCategoria");
             },
         );
     });
 
-Route::controller(CitaController::class)->prefix('citas')->group(function () {
-
-
-    Route::get('/pendientes/{id}', 'showCitasPendientes');
-    Route::get('/estadisticas', 'getCitasPorEstado');
-    Route::get('/periodo', 'getCitasPorPeriodo');
-    Route::get('/listar-canceladas', 'listarCitasCanceladas');
-    Route::post('/cancelar-citas', 'cancelarCitasVencidas');
-    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO|PACIENTE']], function () {
-        Route::get('/enlaces','listarCitasPaciente');
-        Route::get('/paciente/{id}','getCitaVouchers');
-        Route::get('/contador','estadisticas');//contador de estados por citas
-        Route::post('/reprogramar/{idCita}',"citaReprogramada");
+Route::controller(CitaController::class)
+    ->prefix("citas")
+    ->group(function () {
+        Route::get("/pendientes/{id}", "showCitasPendientes");
+        Route::get("/estadisticas", "getCitasPorEstado");
+        Route::get("/periodo", "getCitasPorPeriodo");
+        Route::get("/listar-canceladas", "listarCitasCanceladas");
+        Route::post("/cancelar-citas", "cancelarCitasVencidas");
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:PSICOLOGO|PACIENTE"]],
+            function () {
+                Route::get("/enlaces", "listarCitasPaciente");
+                Route::get("/paciente/{id}", "getCitaVouchers");
+                Route::get("/contador", "estadisticas"); //contador de estados por citas
+                Route::post("/reprogramar/{idCita}", "citaReprogramada");
+            },
+        );
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:ADMIN"]],
+            function () {
+                Route::post("/habilitar-boucher", "aceptarBoucher"); // ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
+                Route::post("/rechazar", "rechazarBoucher");
+                Route::get("/sin-pagar", "listunpaid"); // Nueva ruta para listar citas sin pagar
+                Route::get("/pagadas", "listpaid");
+            },
+        );
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:PSICOLOGO"]],
+            function () {
+                Route::get("/periodosmensuales", "getCitasPorPeriodoPsicologo");
+                Route::get("/dashboard/psicologo", "psicologoDashboard");
+                Route::get("/lista", "showAllCitasByPsicologo");
+                Route::post("/", "createCita");
+                Route::get("/{id}", "showCitaById");
+                Route::put("/{id}", "updateCita");
+                Route::delete("/{id}", "destroyCita");
+                Route::post("/realizada", "citaRealizada");
+            },
+        );
     });
-    Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
-        Route::post('/habilitar-boucher', 'aceptarBoucher');// ACEPTAR BOUCHER Y GENERAR VIDEOLLAMADA
-        Route::post('/rechazar', 'rechazarBoucher');
-        Route::get('/sin-pagar', 'listunpaid'); // Nueva ruta para listar citas sin pagar
-        Route::get('/pagadas','listpaid');
-    });
-    Route::group(['middleware' => ['auth:sanctum', 'role:PSICOLOGO']], function () {
-        Route::get('/periodosmensuales', 'getCitasPorPeriodoPsicologo');
-        Route::get('/dashboard/psicologo', 'psicologoDashboard');
-        Route::get('/lista', 'showAllCitasByPsicologo');
-        Route::post('/', 'createCita');
-        Route::get('/{id}', 'showCitaById');
-        Route::put('/{id}', 'updateCita');
-        Route::delete('/{id}', 'destroyCita');
-        Route::post('/realizada', 'citaRealizada');
-    });
-
-});
 
 Route::controller(RespuestaComentarioController::class)
     ->prefix("respuestas")
     ->group(function () {
         Route::post("/", "createRespuesta");
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::get("/{id}", "showRespuestasByComentario");
                 Route::delete("/{id}", "destroyRespuesta");
@@ -241,7 +315,12 @@ Route::controller(RegistroFamiliarController::class)
     ->prefix("registros")
     ->group(function () {
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|PSICOLOGO|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::post("/{id}", "createRegistro");
                 Route::get("/{id}", "showRegistro");
@@ -281,7 +360,10 @@ Route::controller(EstadisticasController::class)
 
 Route::controller(MarketingController::class)
     ->prefix("marketing")
-    ->middleware(["auth:sanctum", "role:PSICOLOGO|ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"])
+    ->middleware([
+        "auth:sanctum",
+        "role:PSICOLOGO|ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+    ])
     ->group(function () {
         Route::post("/", "crearPlantilla");
         Route::get("/", "listarPorPsicologo");
@@ -322,7 +404,12 @@ Route::controller(BoucherController::class)
     ->prefix("boucher")
     ->group(function () {
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|PACIENTE|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|PACIENTE|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::post("/enviar", "enviarBoucher");
                 Route::get("/pendientes-aceptadas", "getBouchers"); // lista citas pendientes y aceptadas del paciente filtrar por estado, por rango de fechas y por id de cita
@@ -337,7 +424,12 @@ Route::controller(DisponibilidadController::class)
     ->prefix("disponibilidad")
     ->group(function () {
         Route::group(
-            ["middleware" => ["auth:sanctum", "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION"]],
+            [
+                "middleware" => [
+                    "auth:sanctum",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                ],
+            ],
             function () {
                 Route::get("/listar", "listar"); // filtrar fecha inicio y fecha fin
             },
