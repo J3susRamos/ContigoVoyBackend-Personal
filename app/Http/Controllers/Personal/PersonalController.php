@@ -48,12 +48,17 @@ class PersonalController extends Controller
                 $request->has("permissions") &&
                 is_array($request->permissions)
             ) {
-                foreach ($request->permissions as $permission_name) {
-                    PersonalPermission::create([
-                        "id_user" => $user->user_id,
-                        "id_urls" => null,
-                        "name_permission" => $permission_name,
-                    ]);
+                foreach ($request->permissions as $url_id) {
+                    // Obtener el nombre de la URL correspondiente al ID
+                    $url = \App\Models\Urls::find($url_id);
+
+                    if ($url) {
+                        PersonalPermission::create([
+                            "id_user" => $user->user_id,
+                            "id_urls" => $url_id,
+                            "name_permission" => $url->name,
+                        ]);
+                    }
                 }
             }
 
