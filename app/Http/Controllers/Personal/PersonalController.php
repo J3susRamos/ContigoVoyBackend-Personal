@@ -22,76 +22,91 @@ class PersonalController extends Controller
 
         try {
             $userData = $request->only([
-                'name',
-                'apellido',
-                'email',
-                'password',
-                'fecha_nacimiento',
-                'imagen',
-                'rol'
+                "name",
+                "apellido",
+                "email",
+                "password",
+                "fecha_nacimiento",
+                "imagen",
+                "rol",
             ]);
 
             // Encriptar password
-            $userData['password'] = Hash::make($request->password);
+            $userData["password"] = Hash::make($request->password);
 
             // Fecha en formato correcto
-            $userData['fecha_nacimiento'] = Carbon::parse($userData['fecha_nacimiento'])
-                ->format('Y-m-d');
+            $userData["fecha_nacimiento"] = Carbon::createFromFormat(
+                "d/m/Y",
+                $userData["fecha_nacimiento"],
+            )->format("Y-m-d");
 
             // Crear usuario
             $user = User::create($userData);
 
             // Guardar permisos
-            if ($request->has('permissions') && is_array($request->permissions)) {
-                foreach ($request->permissions as $perm) {
-                    if (is_array($perm)) {
-                        PersonalPermission::create([
-                            'id_user' => $user->user_id,
-                            'id_urls' => $perm['idUrls'],
-                            'name_permission' => $perm['name'] ?? ''
-                        ]);
-                    }
+            if (
+                $request->has("permissions") &&
+                is_array($request->permissions)
+            ) {
+                foreach ($request->permissions as $permission_name) {
+                    PersonalPermission::create([
+                        "id_user" => $user->user_id,
+                        "id_urls" => null,
+                        "name_permission" => $permission_name,
+                    ]);
                 }
             }
 
             DB::commit();
 
             return HttpResponseHelper::make()
-                ->successfulResponse('Personal creado correctamente', [
-                    'user_id' => $user->user_id
+                ->successfulResponse("Personal creado correctamente", [
+                    "user_id" => $user->user_id,
                 ])
                 ->send();
         } catch (\Exception $e) {
             DB::rollBack();
 
             return HttpResponseHelper::make()
-                ->internalErrorResponse('Ocurrió un problema al procesar la solicitud. ' . $e->getMessage())
+                ->internalErrorResponse(
+                    "Ocurrió un problema al procesar la solicitud. " .
+                        $e->getMessage(),
+                )
                 ->send();
         }
     }
 
     public function getPersonalWithPermissions(int $user_id): JsonResponse
     {
-    try {
-        $personal = Personal::find($user_id);
+        try {
+            $personal = Personal::find($user_id);
 
-        if (!$personal) {
+            if (!$personal) {
+                return HttpResponseHelper::make()
+                    ->notFoundResponse(
+                        "El usuario con id {$user_id} no existe.",
+                    )
+                    ->send();
+            }
+            $permissions = PersonalPermission::where("id_user", $user_id)->get([
+                "id",
+                "name_permission",
+                "id_user",
+            ]);
+
             return HttpResponseHelper::make()
-                ->notFoundResponse("El usuario con id {$user_id} no existe.")
+                ->successfulResponse(
+                    "Permisos obtenidos correctamente",
+                    $permissions,
+                )
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse(
+                    "Ocurrió un error al obtener los permisos. " .
+                        $e->getMessage(),
+                )
                 ->send();
         }
-        $permissions = PersonalPermission::where('id_user', $user_id)
-            ->get(['id', 'name_permission', 'id_user']);
-
-        return HttpResponseHelper::make()
-            ->successfulResponse("Permisos obtenidos correctamente", $permissions)
-            ->send();
-
-    } catch (\Exception $e) {
-        return HttpResponseHelper::make()
-            ->internalErrorResponse("Ocurrió un error al obtener los permisos. " . $e->getMessage())
-            ->send();
     }
-    }   
 }
-
