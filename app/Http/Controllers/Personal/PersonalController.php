@@ -44,11 +44,13 @@ class PersonalController extends Controller
             // Guardar permisos
             if ($request->has('permissions') && is_array($request->permissions)) {
                 foreach ($request->permissions as $perm) {
-                    PersonalPermission::create([
-                        'id_user' => $user->user_id,
-                        'id_urls' => $perm['idUrls'],
-                        'name_permission' => $perm['name'] ?? ''
-                    ]);
+                    if (is_array($perm)) {
+                        PersonalPermission::create([
+                            'id_user' => $user->user_id,
+                            'id_urls' => $perm['idUrls'],
+                            'name_permission' => $perm['name'] ?? ''
+                        ]);
+                    }
                 }
             }
 
