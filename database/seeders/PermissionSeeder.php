@@ -13,9 +13,17 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        Permission::create(['name' => 'VER']);
-        Permission::create(['name' => 'ACTUALIZAR']);
-        Permission::create(['name' => 'ELIMINAR']);
-        Permission::create(['name' => 'ENVIAR']);
+        $permissions = [
+            'VER',
+            'ACTUALIZAR',
+            'ELIMINAR',
+            'ENVIAR'
+        ];
+
+        foreach ($permissions as $permissionName) {
+            Permission::firstOrCreate(
+                ['name' => $permissionName, 'guard_name' => 'web']
+            );
+        }
     }
 }

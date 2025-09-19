@@ -13,12 +13,19 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::create(['name' => 'ADMIN', 'guard_name' => 'web']);
-        
-        Role::create(['name' => 'PSICOLOGO', 'guard_name' => 'web']);
+        // Use firstOrCreate so seeding is idempotent and won't fail if roles already exist
+        $roles = [
+            'ADMIN',
+            'PSICOLOGO',
+            'PACIENTE',
+            'MARKETING',
+            'COMUNICACION' // Agregando este rol que vi en las rutas
+        ];
 
-        Role::create(['name' => 'PACIENTE', 'guard_name' => 'web']);
-
-        Role::create(['name' => 'MARKETING', 'guard_name' => 'web']);
+        foreach ($roles as $roleName) {
+            Role::firstOrCreate(
+                ['name' => $roleName, 'guard_name' => 'web']
+            );
+        }
     }
 }
