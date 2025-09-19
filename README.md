@@ -1,0 +1,200 @@
+I'll analyze your Laravel project structure to create a comprehensive README. Let me first examine some key files to understand the project better.Let me explore the application structure to better understand the project functionality.Based on the project structure and the information I've gathered, here's a proper README for the "ContigoVoy2" Laravel healthcare application:
+
+```markdown
+# ContigoVoy2 - Healthcare Management System
+
+ContigoVoy2 is a comprehensive healthcare management system built with Laravel, designed to streamline psychological healthcare services. The platform provides a complete solution for managing patients, psychologists, appointments, and healthcare consultations.
+
+## Features
+
+### Core Functionality
+- **Patient Management**: Complete patient registration, profile management, and medical records
+- **Psychologist Network**: Professional psychologist profiles with specializations and availability
+- **Appointment Scheduling**: Advanced booking system with multiple appointment types and channels
+- **Healthcare Blog**: Educational content and communication platform
+- **Family Registry**: Track family medical history and relationships
+- **Pre-patient System**: Initial consultation and screening process
+
+### Technical Features
+- **API-First Architecture**: RESTful API with Laravel Sanctum authentication
+- **Role-Based Access Control**: Powered by Spatie Laravel Permission
+- **Queue Management**: Background job processing for emails and notifications
+- **Database Optimization**: MySQL with advanced migrations and seeders
+- **Modern Frontend**: Built with Vite, TailwindCSS, and modern JavaScript
+
+## Technology Stack
+
+### Backend
+- **Framework**: Laravel 12.19.3
+- **PHP Version**: 8.2+
+- **Database**: MySQL
+- **Authentication**: Laravel Sanctum
+- **Authorization**: Spatie Laravel Permission
+- **Queue System**: Database-driven queues
+- **Email**: Laravel Mailable with custom templates
+
+### Frontend
+- **Build Tool**: Vite 6.2.0
+- **CSS Framework**: TailwindCSS 3.4.13
+- **HTTP Client**: Axios 1.7.4
+- **Package Manager**: npm
+
+### Development Tools
+- **Testing**: Pest 3.7+ with PHPUnit
+- **Code Quality**: Laravel Pint, PHPStan
+- **Development Environment**: Laravel Sail
+- **IDE Support**: Laravel IDE Helper
+
+## Installation
+
+### Prerequisites
+- PHP 8.2 or higher
+- Composer
+- Node.js and npm
+- MySQL
+
+### Setup Instructions
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd back-End-contigoVoy2
+   ```
+
+2. **Install PHP dependencies**
+   ```bash
+   composer install
+   ```
+
+3. **Install Node.js dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Environment Configuration**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+5. **Database Setup**
+   ```bash
+   # Configure your database credentials in .env file
+   php artisan migrate
+   php artisan db:seed
+   ```
+
+6. **Storage Configuration**
+   ```bash
+   php artisan storage:link
+   ```
+
+## Development
+
+### Running the Application
+
+**Development Mode** (recommended):
+```
+bash
+composer run dev
+```
+This command starts the Laravel server, queue worker, and Vite development server concurrently.
+
+**Manual Mode**:
+```bash
+# Terminal 1: Laravel server
+php artisan serve
+
+# Terminal 2: Queue worker
+php artisan queue:work
+
+# Terminal 3: Frontend development
+npm run dev
+```
+```
+
+
+### Testing
+
+```shell script
+# Run all tests
+php artisan test
+
+# Run specific test suite
+vendor/bin/pest --filter=PatientTest
+```
+
+
+### Code Quality
+
+```shell script
+# Format code
+./vendor/bin/pint
+
+# IDE Helper generation
+php artisan ide-helper:generate
+php artisan ide-helper:models
+```
+
+
+## API Documentation
+
+The application provides a comprehensive REST API for all healthcare management operations:
+
+### Main Endpoints
+- **Authentication**: `/api/auth/*`
+- **Patients**: `/api/pacientes/*`
+- **Psychologists**: `/api/psicologos/*`
+- **Appointments**: `/api/citas/*`
+- **Blog**: `/api/blogs/*`
+- **Specialties**: `/api/especialidades/*`
+
+### Authentication
+The API uses Laravel Sanctum for token-based authentication. Include the bearer token in the Authorization header for protected endpoints.
+
+## Key Components
+
+### Models
+- **Paciente**: Patient management with demographic and medical information
+- **Psicologo**: Psychologist profiles with specializations and schedules
+- **Cita**: Appointment scheduling with multiple types and channels
+- **Blog**: Content management for educational materials
+- **User**: Authentication and user management
+- **Especialidad**: Medical specializations
+- **RegistroFamiliar**: Family medical history tracking
+
+### Controllers
+- Organized by feature areas (Pacientes, Psicologos, Citas, etc.)
+- RESTful API design with proper HTTP status codes
+- Comprehensive request validation using Form Requests
+
+### Features
+- **Email Notifications**: Automated patient confirmations and communications
+- **File Uploads**: Patient images and document management
+- **Advanced Querying**: Search and filter capabilities across all entities
+- **Data Validation**: Comprehensive input validation and sanitization
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit your changes: `git commit -am 'Add new feature'`
+4. Push to the branch: `git push origin feature/new-feature`
+5. Submit a pull request
+
+### Coding Standards
+- Follow PSR-12 coding standards
+- Use Laravel best practices
+- Write tests for new features
+- Update documentation as needed
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+- Check the project documentation
+
+---
+
+**Contigo Voy** - Bringing healthcare professionals and patients together through technology.
