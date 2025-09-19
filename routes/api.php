@@ -27,6 +27,14 @@ Route::controller(UserController::class)
     ->prefix("users")
     ->group(function () {
         Route::get("/get", "getUsersByRole");
+
+        // Nuevas rutas para gestión de trabajadores (solo ADMIN)
+        Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
+            Route::get("/workers", "getAllWorkers");
+            Route::post("/change-role", "changeUserRole");
+            Route::post("/toggle-status", "toggleUserStatus");
+            Route::get("/workers/stats", "getWorkersStats");
+        });
     });
 
 Route::controller(AuthController::class)
