@@ -1094,48 +1094,42 @@ class CitaController extends Controller
     }
 
     //Consulta para las citas del psicologo (total por fechas)
-    public function getCitasPorPeriodoPsicologo()
-    {
-        $userId = Auth::id();
-        $psicologo = Psicologo::where("user_id", $userId)->first();
+   public function getCitasPorPeriodoPsicologo()
+{
+    $userId = Auth::id();
+    $psicologo = Psicologo::where("user_id", $userId)->first();
 
-        if (!$psicologo) {
-            return HttpResponseHelper::make()
-                ->notFoundResponse(
-                    "No se encontró un psicólogo asociado a este usuario.",
-                )
-                ->send();
-        }
-
+    // Mantener la misma lógica original para psicólogos
+    if ($psicologo) {
         $idPsicologo = $psicologo->idPsicologo;
-
         $citas = Cita::selectRaw("DATE(fecha_cita) as fecha, COUNT(*) as total")
             ->where("idPsicologo", $idPsicologo)
             ->groupBy("fecha_cita")
             ->orderBy("fecha_cita", "asc")
             ->get();
-
-        return response()->json($citas);
+    } else {
+        // Para ADMIN: misma consulta pero sin filtrar por psicólogo
+        $citas = Cita::selectRaw("DATE(fecha_cita) as fecha, COUNT(*) as total")
+            ->groupBy("fecha_cita")
+            ->orderBy("fecha_cita", "asc")
+            ->get();
     }
+
+    return response()->json($citas);
+}
 
     //Nueva consulta de dashboard del psicólogo
 
-    public function psicologoDashboard()
-    {
-        $userId = Auth::id();
-        $psicologo = Psicologo::where("user_id", $userId)->first();
+public function psicologoDashboard()
+{
+    $userId = Auth::id();
+    $psicologo = Psicologo::where("user_id", $userId)->first();
 
-        if (!$psicologo) {
-            return HttpResponseHelper::make()
-                ->notFoundResponse(
-                    "No se encontró un psicólogo asociado a este usuario.",
-                )
-                ->send();
-        }
-
+    // Mantener la misma lógica original para psicólogos
+    if ($psicologo) {
         $idPsicologo = $psicologo->idPsicologo;
 
-        // Obtener citas del psicólogo
+        // Obtener citas del psicólogo (lógica original)
         $totalCitas = Cita::where("idPsicologo", $idPsicologo)->count();
         $citasSinPagar = Cita::where("idPsicologo", $idPsicologo)
             ->where("estado_Cita", "Sin pagar")
@@ -1159,35 +1153,58 @@ class CitaController extends Controller
             ->whereIn("estado_Cita", ["Pendiente"])
             ->sum("duracion");
 
-        //Cambio en total de pacientes
+        // Total de pacientes (lógica original)
         $totalPacientes = Paciente::where("idPsicologo", $idPsicologo)
             ->whereNotNull("idPaciente")
             ->distinct("idPaciente")
             ->count("idPaciente");
 
-        //Cambio en nuevos pacientes
+        // Nuevos pacientes (lógica original)
         $nuevosPacientes = Cita::where("idPsicologo", $idPsicologo)
             ->where("estado_Cita", "Pendiente")
             ->whereNotNull("idPaciente")
             ->where("fecha_Cita", ">=", now()->subDays(7))
             ->orderBy("fecha_Cita", "asc")
             ->count();
+    } else {
+        // Para ADMIN: misma lógica pero sin filtrar por psicólogo
+        $totalCitas = Cita::count();
+        $citasSinPagar = Cita::where("estado_Cita", "Sin pagar")->count();
+        $citasRealizadas = Cita::where("estado_Cita", "Realizada")->count();
+        $citasPendientes = Cita::where("estado_Cita", "Pendiente")->count();
+        $citasCanceladas = Cita::where("estado_Cita", "Cancelada")->count();
+        $citasReprogramadas = Cita::where("estado_Cita", "Reprogramada")->count();
+        $citasAusentes = Cita::where("estado_Cita", "Ausente")->count();
+        $totalMinutosReservados = Cita::whereIn("estado_Cita", ["Pendiente"])->sum("duracion");
 
-        return HttpResponseHelper::make()
-            ->successfulResponse("Datos del dashboard cargados correctamente", [
-                "total_citas" => $totalCitas,
-                "citas_sin_pagar" => $citasSinPagar,
-                "citas_realizadas" => $citasRealizadas,
-                "citas_pendientes" => $citasPendientes,
-                "citas_ausentes" => $citasAusentes,
-                "citas_reprogramadas" => $citasReprogramadas,
-                "citas_canceladas" => $citasCanceladas,
-                "total_minutos_reservados" => $totalMinutosReservados,
-                "total_pacientes" => $totalPacientes,
-                "nuevos_pacientes" => $nuevosPacientes,
-            ])
-            ->send();
+        // Para ADMIN: total de todos los pacientes
+        $totalPacientes = Paciente::whereNotNull("idPaciente")
+            ->distinct("idPaciente")
+            ->count("idPaciente");
+
+        // Para ADMIN: nuevos pacientes de todos los psicólogos
+        $nuevosPacientes = Cita::where("estado_Cita", "Pendiente")
+            ->whereNotNull("idPaciente")
+            ->where("fecha_Cita", ">=", now()->subDays(7))
+            ->orderBy("fecha_Cita", "asc")
+            ->count();
     }
+
+    return HttpResponseHelper::make()
+        ->successfulResponse("Datos del dashboard cargados correctamente", [
+            "total_citas" => $totalCitas,
+            "citas_sin_pagar" => $citasSinPagar,
+            "citas_realizadas" => $citasRealizadas,
+            "citas_pendientes" => $citasPendientes,
+            "citas_ausentes" => $citasAusentes,
+            "citas_reprogramadas" => $citasReprogramadas,
+            "citas_canceladas" => $citasCanceladas,
+            "total_minutos_reservados" => $totalMinutosReservados,
+            "total_pacientes" => $totalPacientes,
+            "nuevos_pacientes" => $nuevosPacientes,
+        ])
+        ->send();
+}
 
     public function estadisticas()
     {
