@@ -36,7 +36,8 @@ return [
 
     "whatsapp_service" => [
         "base_url" => env("WHATSAPP_SERVICE_URL", "http://localhost:5111"),
-        "token" => env("WHATSAPP_SERVICE_TOKEN"),
+        "username" => env("WHATSAPP_SERVICE_USERNAME", "admin"),
+        "password" => env("WHATSAPP_SERVICE_PASSWORD", "admin123"),
         "timeout" => env("WHATSAPP_SERVICE_TIMEOUT", 30),
     ],
 ];

@@ -18,7 +18,9 @@ class WhatsAppServiceCommand extends Command
                             {--status : Verificar estado del servicio}
                             {--qr : Mostrar información del código QR}
                             {--test : Enviar mensaje de prueba}
-                            {--reconnect : Forzar reconexión del servicio}';
+                            {--reconnect : Forzar reconexión del servicio}
+                            {--token : Mostrar información del token de autenticación}
+                            {--refresh-token : Renovar token de autenticación}';
 
     /**
      * The console command description.
@@ -42,6 +44,8 @@ class WhatsAppServiceCommand extends Command
         $qr = $this->option("qr");
         $test = $this->option("test");
         $reconnect = $this->option("reconnect");
+        $token = $this->option("token");
+        $refreshToken = $this->option("refresh-token");
 
         if ($status) {
             $this->checkServiceStatus();
@@ -51,6 +55,10 @@ class WhatsAppServiceCommand extends Command
             $this->testService();
         } elseif ($reconnect) {
             $this->forceReconnect();
+        } elseif ($token) {
+            $this->showTokenInformation();
+        } elseif ($refreshToken) {
+            $this->refreshToken();
         } else {
             $this->showServiceOverview();
         }
@@ -64,12 +72,15 @@ class WhatsAppServiceCommand extends Command
         $this->info("🔍 Verificando configuración...");
 
         $baseUrl = config("services.whatsapp_service.base_url");
-        $token = config("services.whatsapp_service.token");
+        $username = config("services.whatsapp_service.username");
+        $password = config("services.whatsapp_service.password");
         $timeout = config("services.whatsapp_service.timeout", 30);
 
-        if (!$token) {
-            $this->error("❌ WHATSAPP_SERVICE_TOKEN no configurado en .env");
-            $this->line("Agrega: WHATSAPP_SERVICE_TOKEN=tu_token_aqui");
+        if (!$username || !$password) {
+            $this->error("❌ Credenciales de login no configuradas en .env");
+            $this->line(
+                "Agrega: env de user y password para WhatsAppServiceCommand",
+            );
             return false;
         }
 
@@ -81,7 +92,7 @@ class WhatsAppServiceCommand extends Command
             $this->info("✅ URL del servicio: {$baseUrl}");
         }
 
-        $this->info("✅ Token configurado");
+        $this->info("✅ Credenciales configuradas (usuario: {$username})");
         $this->info("✅ Timeout: {$timeout}s");
 
         return true;
@@ -286,6 +297,97 @@ class WhatsAppServiceCommand extends Command
     }
 
     /**
+     * Mostrar información del token de autenticación
+     */
+    private function showTokenInformation()
+    {
+        $this->info("🔐 Información del Token de Autenticación:");
+        $this->newLine();
+
+        try {
+            $whatsappService = app(WhatsAppService::class);
+            $tokenInfo = $whatsappService->getTokenInfo();
+
+            if ($tokenInfo["has_token"]) {
+                $this->info("✅ Token: DISPONIBLE");
+
+                if ($tokenInfo["is_valid"]) {
+                    $this->info("✅ Estado: VÁLIDO");
+                } else {
+                    $this->warn("⚠️  Estado: EXPIRADO/INVÁLIDO");
+                }
+
+                if ($tokenInfo["expires_at"]) {
+                    $expiresAt = \Carbon\Carbon::parse(
+                        $tokenInfo["expires_at"],
+                    )->format("d/m/Y H:i:s");
+                    $this->line("⏰ Expira el: {$expiresAt}");
+                }
+            } else {
+                $this->warn("⚠️  Token: NO DISPONIBLE");
+                $this->line(
+                    "El token se obtendrá automáticamente en la próxima petición.",
+                );
+            }
+
+            $this->line("👤 Usuario configurado: {$tokenInfo["username"]}");
+
+            $this->newLine();
+            $this->line("💡 Para renovar el token manualmente:");
+            $this->line("  php artisan whatsapp:service --refresh-token");
+        } catch (\Exception $e) {
+            $this->error(
+                "❌ Error obteniendo información del token: {$e->getMessage()}",
+            );
+        }
+    }
+
+    /**
+     * Renovar token de autenticación
+     */
+    private function refreshToken()
+    {
+        $this->info("🔄 Renovando token de autenticación...");
+        $this->newLine();
+
+        try {
+            $whatsappService = app(WhatsAppService::class);
+            $result = $whatsappService->refreshToken();
+
+            if ($result["success"]) {
+                $this->info("✅ Token renovado exitosamente");
+
+                if (isset($result["expires_at"])) {
+                    $expiresAt = \Carbon\Carbon::parse(
+                        $result["expires_at"],
+                    )->format("d/m/Y H:i:s");
+                    $this->line("⏰ Nuevo token expira el: {$expiresAt}");
+                }
+
+                $this->newLine();
+                $this->info(
+                    "🎉 El servicio ya puede realizar peticiones con el nuevo token",
+                );
+            } else {
+                $this->error("❌ Error renovando token");
+                $this->line(
+                    "Error: " . ($result["error"] ?? "Error desconocido"),
+                );
+
+                $this->newLine();
+                $this->warn("💡 Posibles causas:");
+                $this->line("  • Credenciales incorrectas");
+                $this->line("  • Servicio WhatsApp no disponible");
+                $this->line("  • Problemas de conectividad");
+            }
+        } catch (\Exception $e) {
+            $this->error(
+                "❌ Error en renovación del token: {$e->getMessage()}",
+            );
+        }
+    }
+
+    /**
      * Mostrar resumen general del servicio
      */
     private function showServiceOverview()
@@ -321,16 +423,22 @@ class WhatsAppServiceCommand extends Command
         $this->newLine();
         $this->line("💡 Comandos disponibles:");
         $this->line(
-            "  php artisan whatsapp:service --status     # Ver estado detallado",
+            "  php artisan whatsapp:service --status         # Ver estado detallado",
         );
         $this->line(
-            "  php artisan whatsapp:service --qr         # Información del QR",
+            "  php artisan whatsapp:service --qr             # Información del QR",
         );
         $this->line(
-            "  php artisan whatsapp:service --test       # Enviar mensaje de prueba",
+            "  php artisan whatsapp:service --test           # Enviar mensaje de prueba",
         );
         $this->line(
-            "  php artisan whatsapp:service --reconnect  # Forzar reconexión",
+            "  php artisan whatsapp:service --reconnect      # Forzar reconexión",
+        );
+        $this->line(
+            "  php artisan whatsapp:service --token          # Información del token",
+        );
+        $this->line(
+            "  php artisan whatsapp:service --refresh-token  # Renovar token",
         );
     }
 }

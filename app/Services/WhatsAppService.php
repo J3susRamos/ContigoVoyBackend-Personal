@@ -11,6 +11,9 @@ class WhatsAppService
     private $baseUrl;
     private $token;
     private $timeout;
+    private $username;
+    private $password;
+    private $tokenExpiration;
 
     public function __construct()
     {
@@ -18,13 +21,97 @@ class WhatsAppService
             "services.whatsapp_service.base_url",
             "http://localhost:5111",
         );
-        $this->token = config("services.whatsapp_service.token");
         $this->timeout = config("services.whatsapp_service.timeout", 30);
+        $this->username = config("services.whatsapp_service.username", "admin");
+        $this->password = config(
+            "services.whatsapp_service.password",
+            "admin123",
+        );
 
-        if (!$this->token) {
-            Log::error("WhatsApp Service token not configured");
-            throw new Exception("WhatsApp Service token not configured");
+        // El token se obtendrá dinámicamente mediante login
+        $this->token = null;
+        $this->tokenExpiration = null;
+    }
+
+    /**
+     * Realizar login y obtener token de autenticación
+     */
+    private function login(): bool
+    {
+        try {
+            $loginUrl = "{$this->baseUrl}/api/auth/login";
+
+            $response = Http::timeout($this->timeout)->post($loginUrl, [
+                "username" => $this->username,
+                "password" => $this->password,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                if (isset($data["token"])) {
+                    $this->token = $data["token"];
+                    // Si hay información de expiración, la guardamos
+                    if (isset($data["expires_in"])) {
+                        $this->tokenExpiration = now()->addSeconds(
+                            $data["expires_in"],
+                        );
+                    } else {
+                        // Por defecto, asumir que el token expira en 1 hora
+                        $this->tokenExpiration = now()->addHour();
+                    }
+
+                    Log::info("WhatsApp Service login successful");
+                    return true;
+                }
+            }
+
+            Log::error("WhatsApp Service login failed", [
+                "status" => $response->status(),
+                "response" => $response->json(),
+            ]);
+
+            return false;
+        } catch (Exception $e) {
+            Log::error("WhatsApp Service login error", [
+                "error" => $e->getMessage(),
+            ]);
+            return false;
         }
+    }
+
+    /**
+     * Verificar si el token es válido y no ha expirado
+     */
+    private function isTokenValid(): bool
+    {
+        if (!$this->token) {
+            return false;
+        }
+
+        if ($this->tokenExpiration && $this->tokenExpiration->isPast()) {
+            Log::info("WhatsApp Service token expired, need to re-login");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Obtener token válido (realizar login si es necesario)
+     */
+    private function getValidToken(): ?string
+    {
+        if ($this->isTokenValid()) {
+            return $this->token;
+        }
+
+        // Intentar login para obtener nuevo token
+        if ($this->login()) {
+            return $this->token;
+        }
+
+        return null;
     }
 
     /**
@@ -287,8 +374,19 @@ class WhatsAppService
         string $method = "POST",
     ): array {
         try {
+            // Obtener token válido antes de hacer la petición
+            $token = $this->getValidToken();
+
+            if (!$token) {
+                return [
+                    "success" => false,
+                    "error" =>
+                        "No se pudo obtener token de autenticación para WhatsApp Service",
+                ];
+            }
+
             $httpClient = Http::withHeaders([
-                "Authorization" => "Bearer " . $this->token,
+                "Authorization" => "Bearer " . $token,
                 "Content-Type" => "application/json",
                 "Accept" => "application/json",
             ])->timeout($this->timeout);
@@ -348,6 +446,45 @@ class WhatsAppService
                     $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Forzar nuevo login (útil para renovar token manualmente)
+     */
+    public function refreshToken(): array
+    {
+        $this->token = null;
+        $this->tokenExpiration = null;
+
+        if ($this->login()) {
+            return [
+                "success" => true,
+                "message" => "Token renovado exitosamente",
+                "expires_at" => $this->tokenExpiration
+                    ? $this->tokenExpiration->toISOString()
+                    : null,
+            ];
+        }
+
+        return [
+            "success" => false,
+            "error" => "No se pudo renovar el token",
+        ];
+    }
+
+    /**
+     * Obtener información del token actual
+     */
+    public function getTokenInfo(): array
+    {
+        return [
+            "has_token" => !is_null($this->token),
+            "expires_at" => $this->tokenExpiration
+                ? $this->tokenExpiration->toISOString()
+                : null,
+            "is_valid" => $this->isTokenValid(),
+            "username" => $this->username,
+        ];
     }
 
     /**
