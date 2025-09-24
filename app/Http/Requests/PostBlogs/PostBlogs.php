@@ -23,38 +23,31 @@ class PostBlogs extends FormRequest
     {
         return [
             'tema'          => 'required|string|min:20|max:200',
-            'slug'          => 'sometimes|string|max:100|unique:blogs,slug,' . $this->route('id'),
-            'contenido'     => 'required|string|min:200',
-            'imagenes'      => 'required|array|min:1|max:6',
-            'imagenes.*'    => 'required|string', // Cada imagen debe ser un string (base64 o URL)
-            'idCategoria'   => 'required|exists:categorias,idCategoria',
+            'slug'          => 'sometimes|string|max:100|unique:posts,slug,' . $this->route('id'),
+            'descripcion'   => 'required|string|min:200', // contenido -> descripcion
+            'imagen'        => 'required|string', // imagenes -> imagen (string simple)
+            'especialidad'  => 'required|string', // idCategoria -> especialidad
         ];
     }
 
 
 
-    //mensajes oara validacion
+        //mensajes oara validacion
 
     public function messages(): array
     {
         return [
-            'idCategoria.required' => 'El campo categoría es obligatorio.',
-            'idCategoria.exists' => 'La categoría seleccionada no existe.',
+            'especialidad.required' => 'El campo categoría es obligatorio.',
             'tema.required' => 'El título es obligatorio.',
             'tema.min' => 'El título debe tener al menos 20 caracteres.',
             'tema.max' => 'El título no puede exceder 200 caracteres.',
             'slug.string' => 'El slug debe ser texto.',
             'slug.max' => 'El slug no puede exceder 100 caracteres.',
             'slug.unique' => 'Este slug ya está en uso.',
-            'contenido.required' => 'El contenido es obligatorio.',
-            'contenido.min' => 'El contenido debe tener al menos 200 caracteres.',
-            'imagenes.required' => 'Debe agregar al menos 1 imagen.',
-            'imagenes.min' => 'Debe agregar un mínimo de 1 imagen.',
-            'imagenes.max' => 'No puede agregar más de 6 imágenes.',
-            'imagenes.*.required' => 'Todas las imágenes son obligatorias.',
-            'imagenes.*.string' => 'Formato de imagen inválido.',
-            'idPsicologo.required' => 'Debe especificar un psicólogo.',
-            'idPsicologo.exists' => 'El psicólogo seleccionado no existe.'
+            'descripcion.required' => 'El contenido es obligatorio.',
+            'descripcion.min' => 'El contenido debe tener al menos 200 caracteres.',
+            'imagen.required' => 'Debe agregar una imagen.',
+            'imagen.string' => 'Formato de imagen inválido.',
         ];
     }
 }
