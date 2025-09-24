@@ -12,21 +12,21 @@ class Blog extends Model
 {
     use HasFactory;
 
-    protected $table = 'blogs';
-    protected $primaryKey = 'idBlog';
+    protected $table = 'posts';
+    protected $primaryKey = 'id';
     public $timestamps = false;
 
     protected $fillable = [
-        'idCategoria',
         'tema',
-        'slug',
-        'contenido',
-        'imagenes',
-        'idPsicologo',
+        'especialidad', // categoría
+        'descripcion', // contenido
+        'imagen',
+        'psicologo_id',
+        'fecha'
     ];
 
     protected $casts = [
-        'imagenes' => 'array',
+        'fecha' => 'datetime',
     ];
 
     protected static function boot()
@@ -34,24 +34,26 @@ class Blog extends Model
         parent::boot();
 
         static::creating(function ($blog) {
-            if (empty($blog->slug)) {
-                $blog->slug = $blog->generateSlug($blog->tema);
+            // Agregar fecha si no existe
+            if (empty($blog->fecha)) {
+                $blog->fecha = now();
             }
+
+            // Log para debugging
+            \Log::info("Creando blog con título: " . $blog->tema);
         });
 
         static::updating(function ($blog) {
-            // Solo regenerar slug si el título cambió Y no hay un slug personalizado
-            if ($blog->isDirty('tema')) {
-                $currentSlug = $blog->getOriginal('slug');
-                $expectedSlug = $blog->createSlugFromTitle($blog->getOriginal('tema'));
-
-                // Solo regenerar slug si el slug actual coincide con el slug auto-generado anterior
-                // Esto permite slugs personalizados
-                if ($currentSlug === $expectedSlug || empty($currentSlug)) {
-                    $blog->slug = $blog->generateSlug($blog->tema);
-                }
-            }
+            \Log::info("Actualizando blog ID: " . $blog->id);
         });
+    }
+
+    /**
+     * Generar slug dinámicamente desde el título
+     */
+    public function getSlugAttribute(): string
+    {
+        return $this->createSlugFromTitle($this->tema);
     }
 
     /**
@@ -60,7 +62,7 @@ class Blog extends Model
     public function generateSlug(string $title): string
     {
         $baseSlug = $this->createSlugFromTitle($title);
-        return $this->ensureUniqueSlug($baseSlug);
+        return $baseSlug; // No verificamos unicidad ya que no se almacena
     }
 
     /**
@@ -98,41 +100,29 @@ class Blog extends Model
     }
 
     /**
-     * Asegurar que el slug sea único
-     */
-    private function ensureUniqueSlug(string $baseSlug): string
-    {
-        $slug = $baseSlug;
-        $counter = 1;
-
-        while (static::where('slug', $slug)->where('idBlog', '!=', $this->idBlog ?? 0)->exists()) {
-            $slug = $baseSlug . '-' . $counter;
-            $counter++;
-        }
-
-        return $slug;
-    }
-
-    /**
-     * Buscar blog por slug
+     * Buscar blog por slug generado dinámicamente
      */
     public static function findBySlug(string $slug)
     {
-        return static::where('slug', $slug)->first();
+        // Convertir slug de vuelta a formato de búsqueda
+        $searchTerm = str_replace('-', ' ', $slug);
+        return static::where('tema', 'LIKE', '%' . $searchTerm . '%')->first();
     }
 
     public function psicologo(): BelongsTo
     {
-        return $this->belongsTo(Psicologo::class, 'idPsicologo', 'idPsicologo');
+        return $this->belongsTo(Psicologo::class, 'psicologo_id', 'idPsicologo');
     }
 
-    public function categoria(): BelongsTo
+    // Relación con categoría basada en el campo especialidad (como string)
+    public function categoria()
     {
-        return $this->belongsTo(Categoria::class, 'idCategoria');
+        // Esta será una relación simulada ya que especialidad es un string
+        return (object) ['nombre' => $this->especialidad];
     }
 
     public function comentarios(): HasMany
     {
-        return $this->hasMany(Comentario::class, 'idBlog');
+        return $this->hasMany(Comentario::class, 'idBlog', 'id');
     }
 }
