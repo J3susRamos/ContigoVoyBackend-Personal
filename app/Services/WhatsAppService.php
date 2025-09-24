@@ -41,13 +41,29 @@ class WhatsAppService
         try {
             $loginUrl = "{$this->baseUrl}/api/auth/login";
 
+            Log::info("WhatsApp Service: Intentando login", [
+                "url" => $loginUrl,
+                "username" => $this->username,
+            ]);
+
             $response = Http::timeout($this->timeout)->post($loginUrl, [
                 "username" => $this->username,
                 "password" => $this->password,
             ]);
 
+            Log::info("WhatsApp Service: Respuesta de login recibida", [
+                "status_code" => $response->status(),
+                "response_size" => strlen($response->body()),
+            ]);
+
             if ($response->successful()) {
                 $data = $response->json();
+
+                Log::info("WhatsApp Service: Datos de login", [
+                    "has_token" => isset($data["token"]),
+                    "has_expires_in" => isset($data["expires_in"]),
+                    "response_keys" => array_keys($data),
+                ]);
 
                 if (isset($data["token"])) {
                     $this->token = $data["token"];
@@ -61,7 +77,10 @@ class WhatsAppService
                         $this->tokenExpiration = now()->addHour();
                     }
 
-                    Log::info("WhatsApp Service login successful");
+                    Log::info("WhatsApp Service login successful", [
+                        "token_length" => strlen($this->token),
+                        "expires_at" => $this->tokenExpiration?->toISOString(),
+                    ]);
                     return true;
                 }
             }
@@ -69,12 +88,15 @@ class WhatsAppService
             Log::error("WhatsApp Service login failed", [
                 "status" => $response->status(),
                 "response" => $response->json(),
+                "response_body" => $response->body(),
             ]);
 
             return false;
         } catch (Exception $e) {
             Log::error("WhatsApp Service login error", [
                 "error" => $e->getMessage(),
+                "error_class" => get_class($e),
+                "trace" => $e->getTraceAsString(),
             ]);
             return false;
         }
@@ -119,15 +141,12 @@ class WhatsAppService
      */
     public function sendTextMessage(string $to, string $message): array
     {
-        $url = "{$this->baseUrl}/api/send-message";
+        // Usar endpoint de send-message-accept para mensajes personalizados
+        $url = "{$this->baseUrl}/api/send-message-accept";
 
         $payload = [
-            "phone" => $this->formatPhoneNumber($to),
-            "templateOption" => "custom",
-            "psicologo" => "",
-            "fecha" => "",
-            "hora" => "",
-            "customMessage" => $message,
+            "telefono" => $this->formatPhoneNumber($to),
+            "comentario" => $message,
         ];
 
         return $this->makeRequest($url, $payload, "POST");
@@ -145,9 +164,16 @@ class WhatsAppService
     ): array {
         $url = "{$this->baseUrl}/api/send-message";
 
+        // Mapear templateOption a valores válidos del whatsapp-service
+        $validOptions = [
+            "confirmation" => "cita_gratis",
+            "reminder" => "recordatorio_cita",
+            "cancellation" => "recordatorio_cita", // usar recordatorio como base
+        ];
+
         $payload = [
             "phone" => $this->formatPhoneNumber($to),
-            "templateOption" => $templateOption,
+            "templateOption" => $validOptions[$templateOption] ?? "cita_gratis",
             "psicologo" => $psicologo,
             "fecha" => $fecha,
             "hora" => $hora,
@@ -218,8 +244,8 @@ class WhatsAppService
         $url = "{$this->baseUrl}/api/send-message-accept";
 
         $payload = [
-            "phone" => $this->formatPhoneNumber($to),
-            "message" => $message,
+            "telefono" => $this->formatPhoneNumber($to),
+            "comentario" => $message,
         ];
 
         return $this->makeRequest($url, $payload, "POST");
@@ -233,8 +259,8 @@ class WhatsAppService
         $url = "{$this->baseUrl}/api/send-message-reject";
 
         $payload = [
-            "phone" => $this->formatPhoneNumber($to),
-            "message" => $message,
+            "telefono" => $this->formatPhoneNumber($to),
+            "comentario" => $message,
         ];
 
         return $this->makeRequest($url, $payload, "POST");
@@ -264,9 +290,12 @@ class WhatsAppService
 
         $payload = [
             "phone" => $this->formatPhoneNumber($to),
-            "imageData" => $imageData,
+            "imageData" =>
+                "data:image/" .
+                strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) .
+                ";base64," .
+                $imageData,
             "caption" => $caption,
-            "mimeType" => $mimeType,
         ];
 
         return $this->makeRequest($url, $payload, "POST");
@@ -277,8 +306,28 @@ class WhatsAppService
      */
     public function getConnectionStatus(): array
     {
-        $url = "{$this->baseUrl}/api/status";
-        return $this->makeRequest($url, [], "GET");
+        // Usar qr-status como alternativa ya que /api/status tiene un bug
+        $url = "{$this->baseUrl}/api/qr-status";
+        $result = $this->makeRequest($url, [], "GET");
+
+        // Adaptar respuesta del qr-status para compatibilidad con getConnectionStatus
+        if ($result["success"] && isset($result["data"]["isConnected"])) {
+            $result["connected"] = $result["data"]["isConnected"];
+            $result["data"]["connected"] = $result["data"]["isConnected"];
+
+            // Agregar información adicional del estado de conexión
+            if (isset($result["data"]["connectionState"])) {
+                $connectionState = $result["data"]["connectionState"];
+                $result["data"]["status"] =
+                    $connectionState["status"] ?? "unknown";
+                $result["data"]["socket_status"] =
+                    $connectionState["socketStatus"] ?? "unknown";
+                $result["data"]["reconnect_attempts"] =
+                    $connectionState["reconnectAttempts"] ?? 0;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -344,6 +393,9 @@ class WhatsAppService
             $status = $this->getConnectionStatus();
             return $status["success"] && ($status["connected"] ?? false);
         } catch (Exception $e) {
+            Log::warning("WhatsApp Service: Error verificando conexión", [
+                "error" => $e->getMessage(),
+            ]);
             return false;
         }
     }
@@ -355,6 +407,11 @@ class WhatsAppService
     {
         // Remover caracteres no numéricos
         $phone = preg_replace("/[^\d]/", "", $phone);
+
+        // Si empieza con + lo removemos
+        if (substr($phone, 0, 1) === "+") {
+            $phone = substr($phone, 1);
+        }
 
         // Si tiene 9 dígitos, agregar código de país de Perú (51)
         if (strlen($phone) === 9) {
@@ -378,12 +435,23 @@ class WhatsAppService
             $token = $this->getValidToken();
 
             if (!$token) {
+                Log::error("WhatsApp Service: No se pudo obtener token", [
+                    "url" => $url,
+                    "method" => $method,
+                ]);
                 return [
                     "success" => false,
                     "error" =>
                         "No se pudo obtener token de autenticación para WhatsApp Service",
                 ];
             }
+
+            Log::info("WhatsApp Service: Realizando petición", [
+                "url" => $url,
+                "method" => $method,
+                "has_token" => !empty($token),
+                "payload" => array_merge($payload, ["token_hidden" => "***"]),
+            ]);
 
             $httpClient = Http::withHeaders([
                 "Authorization" => "Bearer " . $token,
@@ -392,25 +460,39 @@ class WhatsAppService
             ])->timeout($this->timeout);
 
             if ($method === "GET") {
-                $response = $httpClient->get($url, $payload);
+                $response = $httpClient->get(
+                    $url,
+                    empty($payload) ? [] : ["query" => $payload],
+                );
             } else {
                 $response = $httpClient->post($url, $payload);
             }
 
             $responseData = $response->json();
 
+            Log::info("WhatsApp Service: Respuesta recibida", [
+                "url" => $url,
+                "method" => $method,
+                "status_code" => $response->status(),
+                "response_size" => strlen($response->body()),
+                "response_data" => $responseData,
+            ]);
+
             if ($response->successful()) {
                 Log::info("WhatsApp message sent successfully", [
                     "url" => $url,
                     "method" => $method,
-                    "phone" => $payload["phone"] ?? null,
+                    "phone" =>
+                        $payload["phone"] ?? ($payload["telefono"] ?? null),
                     "response" => $responseData,
                 ]);
 
                 return [
-                    "success" => true,
+                    "success" => $responseData["success"] ?? true,
                     "data" => $responseData,
-                    "message_id" => $responseData["messageId"] ?? null,
+                    "message_id" =>
+                        $responseData["messageId"] ??
+                        ($responseData["data"]["messageId"] ?? null),
                     "status" => "sent",
                 ];
             }
@@ -420,6 +502,7 @@ class WhatsAppService
                 "method" => $method,
                 "status" => $response->status(),
                 "response" => $responseData,
+                "response_body" => $response->body(),
                 "payload" => $payload,
             ]);
 
@@ -427,7 +510,8 @@ class WhatsAppService
                 "success" => false,
                 "error" =>
                     $responseData["message"] ??
-                    "Error desconocido del servicio WhatsApp",
+                    ($responseData["error"] ??
+                        "Error desconocido del servicio WhatsApp"),
                 "error_code" => $response->status(),
                 "error_details" => $responseData,
             ];
@@ -436,7 +520,9 @@ class WhatsAppService
                 "url" => $url,
                 "method" => $method,
                 "error" => $e->getMessage(),
+                "error_class" => get_class($e),
                 "payload" => $payload,
+                "trace" => $e->getTraceAsString(),
             ]);
 
             return [
@@ -503,6 +589,7 @@ class WhatsAppService
                     "display_phone_number" => "WhatsApp Service Connected",
                     "verified_name" => "Contigo Voy WhatsApp",
                     "quality_rating" => "GREEN",
+                    "connected" => $status["connected"] ?? false,
                     "connection_status" => $status,
                 ],
             ];
@@ -522,39 +609,34 @@ class WhatsAppService
         string $templateName,
         array $parameters = [],
     ): array {
-        // Mapear templates del Business API a nuestros templates personalizados
-        switch ($templateName) {
-            case "appointment_confirmation":
-                return $this->sendConfirmationMessage(
-                    $to,
-                    $parameters[0] ?? "",
-                    $parameters[1] ?? "",
-                    $parameters[2] ?? "",
-                );
+        // Mapear templates a los valores válidos del whatsapp-service
+        $validTemplates = [
+            "appointment_confirmation" => "cita_gratis",
+            "appointment_reminder" => "recordatorio_cita",
+            "appointment_cancellation" => "recordatorio_cita",
+            "cita_gratis" => "cita_gratis",
+            "cita_pagada" => "cita_pagada",
+            "recordatorio_cita" => "recordatorio_cita",
+            "confirmacion_asistencia" => "confirmacion_asistencia",
+        ];
 
-            case "appointment_reminder":
-                return $this->sendReminderMessage(
-                    $to,
-                    $parameters[0] ?? "",
-                    $parameters[1] ?? "",
-                    $parameters[2] ?? "",
-                );
-
-            case "appointment_cancellation":
-                return $this->sendCancellationMessage(
-                    $to,
-                    $parameters[0] ?? "",
-                    $parameters[1] ?? "",
-                    $parameters[2] ?? "",
-                );
-
-            default:
-                // Para templates no reconocidos, enviar como mensaje de texto
-                $message = $templateName;
-                if (!empty($parameters)) {
-                    $message .= ": " . implode(", ", $parameters);
-                }
-                return $this->sendTextMessage($to, $message);
+        if (isset($validTemplates[$templateName]) && count($parameters) >= 3) {
+            // Es un template de cita válido con parámetros suficientes
+            return $this->sendAppointmentMessage(
+                $to,
+                $parameters[0] ?? "",
+                $parameters[1] ?? "",
+                $parameters[2] ?? "",
+                array_search($validTemplates[$templateName], $validTemplates) ?:
+                "confirmation",
+            );
+        } else {
+            // Para templates no reconocidos o sin parámetros, enviar como mensaje de texto
+            $message = $templateName;
+            if (!empty($parameters)) {
+                $message .= ": " . implode(", ", $parameters);
+            }
+            return $this->sendTextMessage($to, $message);
         }
     }
 
