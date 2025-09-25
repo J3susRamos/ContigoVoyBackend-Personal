@@ -2,7 +2,7 @@
 
 ## 📋 Descripción General
 
-El **WhatsApp Service** es un servicio basado en Baileys que proporciona una interfaz completa para enviar mensajes de WhatsApp. Incluye **autenticación automática** mediante login con credenciales, gestión inteligente de tokens y funcionalidades avanzadas de mensajería.
+El **WhatsApp Service** es un servicio basado en Baileys que proporciona una interfaz completa para enviar mensajes de WhatsApp. Incluye **autenticación automática** mediante login con credenciales, gestión inteligente de tokens, funcionalidades avanzadas de mensajería y un **sistema de notificaciones automáticas** para recordatorios de citas.
 
 ## 🔐 Sistema de Autenticación
 
@@ -174,7 +174,52 @@ php artisan whatsapp:service --token
 
 # 🆕 Renovar token manualmente
 php artisan whatsapp:service --refresh-token
+
+# 🧪 Enviar mensaje de prueba directo
+php artisan whatsapp:test-message 51987654321
+php artisan whatsapp:test-message 51987654321 --message="Mensaje personalizado"
 ```
+
+## 🔔 Sistema de Notificaciones Automáticas
+
+### 📱 Comandos de Notificaciones
+```bash
+# Programar notificaciones para próximas citas
+php artisan notifications:schedule
+
+# Programar para próximos 14 días
+php artisan notifications:schedule --days=14
+
+# Procesar notificaciones pendientes
+php artisan notifications:process
+
+# Modo prueba sin envío real
+php artisan notifications:process --dry-run
+
+# Cancelar citas sin pagar
+php artisan app:cancelar-citas-sin-pagar
+```
+
+### 🚀 Schedule Automático
+
+El sistema ejecuta automáticamente:
+- **Cada 5 minutos**: Procesa notificaciones pendientes
+- **Diario a las 6:00 AM**: Programa notificaciones para próximos 7 días  
+- **Cada hora**: Cancela citas sin pagar expiradas
+
+### 🎯 Tipos de Notificaciones
+
+1. **📅 Recordatorio 24 horas**: Aviso un día antes
+2. **💳 Recordatorio de pago 3 horas**: Para citas sin pagar
+3. **⏰ Recordatorio 1 hora**: Preparación para la cita
+4. **🚨 Recordatorio 30 minutos**: Aviso final
+
+### 📊 Seguimiento y Logs
+
+- **Estado**: `pendiente`, `enviado`, `error`
+- **Logs**: `storage/logs/notifications.log`
+- **Métricas**: Estadísticas automáticas por tipo
+- **Validaciones**: Solo envía para citas válidas
 
 ## 🔄 Flujo de Autenticación Automática
 
@@ -425,4 +470,47 @@ $result = $whatsappService->sendTextMessage('51987654321', 'Mensaje');
 - 📱 **Conectividad**: Usar comandos de diagnóstico
 - 🔐 **Autenticación**: Verificar credenciales y token
 
-**¡El WhatsApp Service ahora es más robusto, seguro y fácil de gestionar!** 🎉
+## 🔔 Integración con Sistema de Notificaciones
+
+### 📱 Uso en NotificationService
+```php
+// El servicio se integra automáticamente
+$notificationService = app(\App\Services\AutomatedNotificationService::class);
+
+// Programar notificaciones para una cita
+$notificationService->programarNotificacionesPorCita($citaId);
+
+// Las notificaciones usan WhatsAppService automáticamente
+// Mensajes como: recordatorio_24_horas, recordatorio_pago_3_horas, etc.
+```
+
+### 🎯 Flujo Automático de Notificaciones
+
+```
+Nueva Cita → Programar 4 Notificaciones → Envío Automático → WhatsApp
+    ↓              ↓                         ↓              ↓
+Cita creada → notification_logs    → Cada 5 min    → Mensaje enviado
+              Estado: pendiente      Process cmd      Estado: enviado
+```
+
+### 📋 Configuración del Schedule
+```bash
+# En producción, agregar a crontab:
+* * * * * cd /path/to/project && php artisan schedule:run
+
+# O monitorear manualmente:
+php artisan schedule:list
+```
+
+### 🎛️ Comandos de Diagnóstico Completo
+```bash
+# Verificar todo el sistema
+php artisan whatsapp:service --status
+php artisan notifications:process --dry-run
+
+# Ver logs en tiempo real
+tail -f storage/logs/notifications.log
+tail -f storage/logs/laravel.log
+```
+
+**¡El WhatsApp Service ahora incluye un sistema completo de notificaciones automáticas!** 🎉
