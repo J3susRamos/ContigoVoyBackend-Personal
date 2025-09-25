@@ -23,10 +23,11 @@ class PostBlogs extends FormRequest
     {
         return [
             'tema'          => 'required|string|min:20|max:200',
-            'slug'          => 'sometimes|string|max:100|unique:posts,slug,' . $this->route('id'),
-            'descripcion'   => 'required|string|min:200', // contenido -> descripcion
-            'imagen'        => 'required|string', // imagenes -> imagen (string simple)
-            'especialidad'  => 'required|string', // idCategoria -> especialidad
+            'slug'          => 'sometimes|string|max:100|unique:blogs,slug,' . $this->route('id'),
+            'contenido'     => 'required|string|min:200',
+            'imagenes'      => 'required|array',
+            'imagenes.*'    => 'string',
+            'idCategoria'   => 'required|integer|exists:categorias,idCategoria',
         ];
     }
 
@@ -37,17 +38,20 @@ class PostBlogs extends FormRequest
     public function messages(): array
     {
         return [
-            'especialidad.required' => 'El campo categoría es obligatorio.',
+            'idCategoria.required' => 'El campo categoría es obligatorio.',
+            'idCategoria.integer' => 'La categoría debe ser un número válido.',
+            'idCategoria.exists' => 'La categoría seleccionada no existe.',
             'tema.required' => 'El título es obligatorio.',
             'tema.min' => 'El título debe tener al menos 20 caracteres.',
             'tema.max' => 'El título no puede exceder 200 caracteres.',
             'slug.string' => 'El slug debe ser texto.',
             'slug.max' => 'El slug no puede exceder 100 caracteres.',
             'slug.unique' => 'Este slug ya está en uso.',
-            'descripcion.required' => 'El contenido es obligatorio.',
-            'descripcion.min' => 'El contenido debe tener al menos 200 caracteres.',
-            'imagen.required' => 'Debe agregar una imagen.',
-            'imagen.string' => 'Formato de imagen inválido.',
+            'contenido.required' => 'El contenido es obligatorio.',
+            'contenido.min' => 'El contenido debe tener al menos 200 caracteres.',
+            'imagenes.required' => 'Debe agregar al menos una imagen.',
+            'imagenes.array' => 'Las imágenes deben estar en formato de lista.',
+            'imagenes.*.string' => 'Cada imagen debe ser una cadena de texto válida.',
         ];
     }
 }
