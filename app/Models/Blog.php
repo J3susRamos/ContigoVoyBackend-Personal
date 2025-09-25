@@ -12,7 +12,7 @@ class Blog extends Model
 {
     use HasFactory;
 
-    protected $table = 'posts';
+    protected $table = 'blogs';
     protected $primaryKey = 'id';
     public $timestamps = false;
 
