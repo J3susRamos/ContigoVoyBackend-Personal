@@ -104,130 +104,45 @@ class BlogController extends Controller
     public function showbyIdBlog($identifier): JsonResponse
     {
         try {
-            // Log detallado para debugging en producción
-            \Log::info("=== INICIO BÚSQUEDA BLOG ===");
-            \Log::info("Identifier recibido: " . $identifier);
-            \Log::info("Tipo de identifier: " . gettype($identifier));
-            \Log::info("Es numérico: " . (is_numeric($identifier) ? 'Sí' : 'No'));
-            \Log::info("Request URL: " . request()->fullUrl());
-
-            // Intentar buscar por ID numérico primero, luego por tema
-            $blog = null;
-
+            // Si el identificador es numérico, buscar por ID
             if (is_numeric($identifier)) {
-                \Log::info("Intentando búsqueda por ID numérico: " . $identifier);
-                $blog = Blog::with(['psicologo.users'])->find($identifier);
-                \Log::info("Resultado búsqueda por ID: " . ($blog ? "ENCONTRADO (ID: {$blog->id})" : "NO ENCONTRADO"));
-                if ($blog) {
-                    \Log::info("Tema del blog encontrado por ID: " . $blog->tema);
-                }
-            }
-
-            // Si no se encuentra por ID, buscar por tema exacto
-            if (!$blog) {
-                \Log::info("Intentando búsqueda por tema exacto: " . $identifier);
-                $blog = Blog::with(['psicologo.users'])->where('tema', $identifier)->first();
-                \Log::info("Resultado búsqueda por tema exacto: " . ($blog ? "ENCONTRADO (ID: {$blog->id})" : "NO ENCONTRADO"));
-                if ($blog) {
-                    \Log::info("Tema del blog encontrado: " . $blog->tema);
-                }
-            }
-
-            // Si no se encuentra por tema exacto, buscar por tema similar (búsqueda flexible)
-            if (!$blog) {
-                // Convertir guiones a espacios y decodificar URL para búsqueda más flexible
+                $blog = Blog::with(['categoria', 'psicologo.users'])->find($identifier);
+            } else {
+                // Si no es numérico, buscar por tema/slug
                 $searchTerm = str_replace('-', ' ', urldecode($identifier));
-                \Log::info("Intentando búsqueda flexible con término: " . $searchTerm);
-                \Log::info("Identifier original: " . $identifier);
-
-                // Verificar cuántos blogs hay en total
-                $totalBlogs = Blog::count();
-                \Log::info("Total de blogs en base de datos: " . $totalBlogs);
-
-                // Listar algunos temas para debug
-                $sampleBlogs = Blog::select('id', 'tema')->limit(5)->get();
-                \Log::info("Muestra de temas en BD:");
-                foreach ($sampleBlogs as $sample) {
-                    \Log::info("  - ID {$sample->id}: {$sample->tema}");
-                }
-
-                // También intentar con búsqueda case-insensitive mejorada
-                $blog = Blog::with(['psicologo.users'])
-                    ->where(function ($query) use ($searchTerm, $identifier) {
-                        $query->where('tema', 'LIKE', '%' . $searchTerm . '%')
-                              ->orWhere('tema', 'LIKE', '%' . $identifier . '%');
-                    })
+                $blog = Blog::with(['categoria', 'psicologo.users'])
+                    ->where('tema', $searchTerm)
+                    ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%')
                     ->first();
-
-                \Log::info("Resultado búsqueda flexible: " . ($blog ? "ENCONTRADO (ID: {$blog->id})" : "NO ENCONTRADO"));
-                if ($blog) {
-                    \Log::info("Tema del blog encontrado con búsqueda flexible: " . $blog->tema);
-                }
-
-                // Si aún no se encuentra, intentar búsqueda más agresiva
-                if (!$blog) {
-                    \Log::info("Intentando búsqueda MUY flexible - case insensitive");
-                    $blog = Blog::with(['psicologo.users'])
-                        ->whereRaw('LOWER(tema) LIKE ?', ['%' . strtolower($searchTerm) . '%'])
-                        ->first();
-                    \Log::info("Resultado búsqueda MUY flexible: " . ($blog ? "ENCONTRADO (ID: {$blog->id})" : "NO ENCONTRADO"));
-                }
             }
 
             if (!$blog) {
-                \Log::error("=== BLOG NO ENCONTRADO ===");
-                \Log::error("Identifier que falló: " . $identifier);
-                \Log::error("Todos los intentos de búsqueda fallaron");
-
-                // Intentar buscar algo similar para debug
-                $similarBlogs = Blog::where('tema', 'LIKE', '%' . substr($identifier, 0, 10) . '%')->limit(3)->get(['id', 'tema']);
-                if ($similarBlogs->count() > 0) {
-                    \Log::info("Blogs similares encontrados:");
-                    foreach ($similarBlogs as $similar) {
-                        \Log::info("  - ID {$similar->id}: {$similar->tema}");
-                    }
-                } else {
-                    \Log::info("No se encontraron blogs similares");
-                }
-
                 return HttpResponseHelper::make()
                     ->notFoundResponse('El blog no fue encontrado')
                     ->send();
             }
 
-            \Log::info("=== BLOG ENCONTRADO EXITOSAMENTE ===");
-            \Log::info("Blog ID: " . $blog->id);
-            \Log::info("Blog tema: " . $blog->tema);
-            \Log::info("Blog psicologo_id: " . $blog->psicologo_id);
-
             $responseData = [
-                'id' => $blog->id,
+                'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
                 'slug' => $blog->slug,
-                'contenido' => $blog->descripcion,
-                'imagenes' => [$blog->imagen], // Convertir a array para compatibilidad
-                'imagen' => $blog->imagen,
+                'contenido' => $blog->contenido,
+                'imagenes' => $blog->imagenes,
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
-                'idCategoria'=> $blog->especialidad,
-                'idPsicologo' => $blog->psicologo_id,
-                'categoria' => $blog->especialidad,
+                'idCategoria' => $blog->idCategoria,
+                'idPsicologo' => $blog->idPsicologo,
+                'categoria' => $blog->categoria?->nombre,
                 'fecha' => $blog->fecha,
             ];
 
-            \Log::info("Datos de respuesta preparados correctamente");
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog obtenido correctamente', $responseData)
                 ->send();
         } catch (\Exception $e) {
-            \Log::error("=== ERROR EN SHOWBYIDBLOG ===");
-            \Log::error("Identifier: " . $identifier);
-            \Log::error("Error: " . $e->getMessage());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
-
             return HttpResponseHelper::make()
-                ->internalErrorResponse('Ocurrió un problema al obtener el blog: ' . $e->getMessage())
+                ->internalErrorResponse('Ocurrió un problema al obtener el blog')
                 ->send();
         }
     }
