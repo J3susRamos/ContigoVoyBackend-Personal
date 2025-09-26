@@ -26,7 +26,8 @@ class BlogController extends Controller
             }
 
             $data = $request->all();
-            $data['idPsicologo'] = $psicologo->idPsicologo;
+            $data['psicologo_id'] = $psicologo->idPsicologo;
+            $data['fecha'] = now();
 
             Blog::create($data);
 
@@ -43,18 +44,18 @@ class BlogController extends Controller
     public function showAllBlogs(): JsonResponse
     {
         try {
-            $blogs = Blog::with('categoria', 'psicologo.users')->orderBy('fecha_publicado','desc')->get()->map(function ($blog) {
+            $blogs = Blog::with('psicologo.users')->orderBy('fecha','desc')->get()->map(function ($blog) {
                 return [
-                    'id' => $blog->idBlog,
+                    'id' => $blog->id,
                     'tema' => $blog->tema,
-                    'slug' => $blog->slug,
-                    'contenido' => Str::limit($blog->contenido, 150),
-                    'imagenes' => $blog->imagenes, // Array de imágenes
-                    'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
+                    'slug' => $blog->slug, // Generado dinámicamente
+                    'contenido' => Str::limit($blog->descripcion, 150),
+                    'imagenes' => [$blog->imagen], // Convertir a array para compatibilidad
+                    'imagen' => $blog->imagen,
                     'nombrePsicologo' => $blog->psicologo->users->name . ' ' . $blog->psicologo->users->apellido,
                     'psicologoImagenId' => $blog->psicologo->users->imagen,
-                    'categoria' =>  $blog->categoria->nombre,
-                    'fecha_publicado' => $blog->fecha_publicado,
+                    'categoria' => $blog->especialidad,
+                    'fecha_publicado' => $blog->fecha,
                 ];
             });
 
@@ -72,23 +73,22 @@ class BlogController extends Controller
     {
         try {
             $blogs = Blog::with([
-                'categoria:idCategoria,nombre',
                 'psicologo:idPsicologo,user_id',
                 'psicologo.users:user_id,name,apellido,imagen',
-            ])->orderBy('fecha_publicado','desc')->get();
+            ])->orderBy('fecha','desc')->get();
 
             $blogs = $blogs->map(fn($blog) => [
-                'idBlog' => $blog->idBlog,
+                'idBlog' => $blog->id,
                 'tema' => $blog->tema,
-                'slug' => $blog->slug,
-                'contenido' => $blog->contenido,
-                'imagenes' => $blog->imagenes, // Array de imágenes
-                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
+                'slug' => $blog->slug, // Generado dinámicamente
+                'contenido' => $blog->descripcion,
+                'imagenes' => [$blog->imagen], // Convertir a array para compatibilidad
+                'imagen' => $blog->imagen,
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
-                'categoria' =>  $blog->categoria->nombre,
-                'fecha' => $blog->fecha_publicado,
+                'categoria' => $blog->especialidad,
+                'fecha' => $blog->fecha,
             ]);
 
             return HttpResponseHelper::make()
@@ -104,29 +104,15 @@ class BlogController extends Controller
     public function showbyIdBlog($identifier): JsonResponse
     {
         try {
-            // Intentar buscar por ID numérico primero, luego por slug, luego por tema
-            $blog = null;
-
+            // Si el identificador es numérico, buscar por ID
             if (is_numeric($identifier)) {
                 $blog = Blog::with(['categoria', 'psicologo.users'])->find($identifier);
-            }
-
-            // Si no se encuentra por ID o no es numérico, buscar por slug
-            if (!$blog) {
-                $blog = Blog::with(['categoria', 'psicologo.users'])->where('slug', $identifier)->first();
-            }
-
-            // Si no se encuentra por slug, buscar por tema exacto
-            if (!$blog) {
-                $blog = Blog::with(['categoria', 'psicologo.users'])->where('tema', $identifier)->first();
-            }
-
-            // Si no se encuentra por tema exacto, buscar por tema similar (búsqueda flexible)
-            if (!$blog) {
-                // Convertir guiones a espacios para búsqueda más flexible
-                $searchTerm = str_replace('-', ' ', $identifier);
+            } else {
+                // Si no es numérico, buscar por tema/slug
+                $searchTerm = str_replace('-', ' ', urldecode($identifier));
                 $blog = Blog::with(['categoria', 'psicologo.users'])
-                    ->where('tema', 'LIKE', '%' . $searchTerm . '%')
+                    ->where('tema', $searchTerm)
+                    ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%')
                     ->first();
             }
 
@@ -137,19 +123,18 @@ class BlogController extends Controller
             }
 
             $responseData = [
-                'id' => $blog->idBlog,
+                'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
                 'slug' => $blog->slug,
                 'contenido' => $blog->contenido,
-                'imagenes' => $blog->imagenes, // Array de imágenes
-                'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
+                'imagenes' => $blog->imagenes,
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
-                'idCategoria'=> $blog->categoria->idCategoria,
-                'idPsicologo' => $blog->idPsicologo, // Agregamos el ID del psicólogo
-                'categoria' =>  $blog->categoria->nombre,
-                'fecha' => $blog->fecha_publicado,
+                'idCategoria' => $blog->idCategoria,
+                'idPsicologo' => $blog->idPsicologo,
+                'categoria' => $blog->categoria?->nombre,
+                'fecha' => $blog->fecha,
             ];
 
             return HttpResponseHelper::make()
@@ -157,7 +142,7 @@ class BlogController extends Controller
                 ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
-                ->internalErrorResponse('Ocurrió un problema al obtener el blog: ' . $e->getMessage())
+                ->internalErrorResponse('Ocurrió un problema al obtener el blog')
                 ->send();
         }
     }
