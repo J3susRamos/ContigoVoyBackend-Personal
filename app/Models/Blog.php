@@ -105,20 +105,12 @@ class Blog extends Model
         $slug = $baseSlug;
         $counter = 1;
 
-        while (static::where('slug', $slug)->where('idBlog', '!=', $this->idBlog ?? 0)->exists()) {
+        while (self::where('slug', $slug)->exists()) {
             $slug = $baseSlug . '-' . $counter;
             $counter++;
         }
 
         return $slug;
-    }
-
-    /**
-     * Buscar blog por slug
-     */
-    public static function findBySlug(string $slug)
-    {
-        return static::where('slug', $slug)->first();
     }
 
     public function psicologo(): BelongsTo
@@ -128,11 +120,11 @@ class Blog extends Model
 
     public function categoria(): BelongsTo
     {
-        return $this->belongsTo(Categoria::class, 'idCategoria');
+        return $this->belongsTo(Categoria::class, 'idCategoria', 'idCategoria');
     }
 
     public function comentarios(): HasMany
     {
-        return $this->hasMany(Comentario::class, 'idBlog');
+        return $this->hasMany(Comentario::class, 'idBlog', 'id');
     }
 }
