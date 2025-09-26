@@ -35,8 +35,7 @@ class PersonalController extends Controller
             $userData["password"] = Hash::make($request->password);
 
             // Fecha en formato correcto
-            $userData["fecha_nacimiento"] = Carbon::createFromFormat(
-                "d/m/Y",
+            $userData["fecha_nacimiento"] = Carbon::parse(
                 $userData["fecha_nacimiento"],
             )->format("Y-m-d");
 
