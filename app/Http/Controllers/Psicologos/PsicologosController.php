@@ -26,7 +26,7 @@ class PsicologosController extends Controller
         try {
             $usuarioData = $requestUser->all();
             $usuarioData['rol'] = 'PSICOLOGO';
-            $usuarioData['fecha_nacimiento'] = Carbon::createFromFormat('d / m / Y', $usuarioData['fecha_nacimiento'])
+            $usuarioData['fecha_nacimiento'] = Carbon::createFromFormat('Y-m-d', $usuarioData['fecha_nacimiento'])
                 ->format('Y-m-d');
             $usuarioData['password'] = Hash::make($requestUser['password']);
 
