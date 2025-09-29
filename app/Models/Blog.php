@@ -23,6 +23,7 @@ class Blog extends Model
         'contenido',
         'imagenes',
         'idPsicologo',
+        'fecha_publicado',
     ];
 
     protected $casts = [
