@@ -486,6 +486,3 @@ Route::controller(DisponibilidadController::class)
             },
         );
     });
-
-
-

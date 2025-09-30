@@ -117,245 +117,217 @@ class PersonalController extends Controller
     }
 
 
-//Agregado M.
-public function getPermissionsByEmail($email)
-{
-    try {
-        \Log::info('=== GET PERMISSIONS BY EMAIL ===');
-        \Log::info('Email buscado: ' . $email);
+    //Agregado M.
+    public function getPermissionsByEmail($email)
+    {
+        try {
+            // Usar DB::table directamente
+            $user = DB::table('users')->where('email', $email)->first();
 
-        // Usar DB::table directamente
-        $user = DB::table('users')->where('email', $email)->first();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado',
+                ], 404);
+            }
 
-        if (!$user) {
+            // **ENCONTRAR EL ID CORRECTO**
+            $userId = $user->id ?? $user->ID ?? $user->Id ?? $user->user_id ?? $user->UserID ?? $user->usuario_id ?? null;
+
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: No se pudo identificar el ID del usuario',
+                ], 400);
+            }
+
+            // Obtener permisos desde personal_permissions
+            $permissions = DB::table('personal_permissions')
+                ->where('id_user', $userId)
+                ->pluck('name_permission')
+                ->toArray();
+
             return response()->json([
-                'success' => false,
-                'message' => 'Usuario no encontrado',
-            ], 404);
-        }
-
-        // **ENCONTRAR EL ID CORRECTO**
-        $userId = $user->id ?? $user->ID ?? $user->Id ?? $user->user_id ?? $user->UserID ?? $user->usuario_id ?? null;
-
-        if (!$userId) {
-            \Log::error('No se pudo encontrar el ID del usuario en getPermissionsByEmail');
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: No se pudo identificar el ID del usuario',
-            ], 400);
-        }
-
-        // Obtener permisos desde personal_permissions
-        $permissions = DB::table('personal_permissions')
-            ->where('id_user', $userId)
-            ->pluck('name_permission')
-            ->toArray();
-
-        return response()->json([
-            'success' => true,
-            'result' => [
-                'id' => $userId,
-                'name' => $user->name ?? $user->Name ?? $user->nombre ?? '',
-                'email' => $user->email ?? $user->Email ?? '',
-                'rol' => $user->rol ?? $user->Rol ?? $user->role ?? null,
-                'permissions' => $permissions,
-            ],
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('ERROR getPermissionsByEmail: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Error al obtener permisos'
-        ], 500);
-    }
-}
-
-public function updatePermissionsByEmail(Request $request)
-{
-    try {
-        \Log::info('=== UPDATE PERMISSIONS START ===');
-        \Log::info('Email recibido: ' . $request->email);
-
-        // Validación básica
-        if (!$request->email) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email requerido',
-            ], 400);
-        }
-
-        // Buscar usuario
-        $user = DB::table('users')->where('email', $request->email)->first();
-        
-        if (!$user) {
-            \Log::error('Usuario NO encontrado: ' . $request->email);
-            return response()->json([
-                'success' => false,
-                'message' => 'Usuario no encontrado: ' . $request->email,
-            ], 404);
-        }
-
-        // Obtener ID del usuario
-        $userId = $user->id ?? $user->ID ?? $user->Id ?? $user->user_id ?? $user->UserID ?? $user->usuario_id ?? null;
-
-        if (!$userId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se pudo identificar el ID del usuario',
-            ], 400);
-        }
-
-        // ✅ Obtener permisos existentes del usuario
-        $existingPermissions = DB::table('personal_permissions')
-            ->where('id_user', $userId)
-            ->pluck('name_permission')
-            ->toArray();
-
-        \Log::info('Permisos existentes: ', $existingPermissions);
-        \Log::info('Permisos solicitados: ', $request->permissions ?: []);
-
-        // ✅ VERIFICAR SI HAY DUPLICADOS
-        $duplicatePermissions = array_intersect($request->permissions, $existingPermissions);
-        
-        if (!empty($duplicatePermissions)) {
-            \Log::warning('Se intentaron agregar permisos duplicados: ', $duplicatePermissions);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'El usuario ya cuenta con algunos permisos seleccionados',
-                'error_type' => 'duplicate_permissions',
-                'duplicate_permissions' => array_values($duplicatePermissions), // ✅ Lista de duplicados
-                'existing_permissions' => $existingPermissions, // ✅ Todos los permisos existentes
-                'user_info' => [
+                'success' => true,
+                'result' => [
                     'id' => $userId,
                     'name' => $user->name ?? $user->Name ?? $user->nombre ?? '',
                     'email' => $user->email ?? $user->Email ?? '',
-                ]
-            ], 409); // ✅ 409 Conflict - indica que hay duplicados
+                    'rol' => $user->rol ?? $user->Rol ?? $user->role ?? null,
+                    'permissions' => $permissions,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener permisos'
+            ], 500);
         }
+    }
 
-        // ✅ SOLO SI NO HAY DUPLICADOS - Insertar todos los permisos
-        $insertedCount = 0;
+    public function updatePermissionsByEmail(Request $request)
+    {
+        try {
 
-        if (!empty($request->permissions) && is_array($request->permissions)) {
-            $permissionsToInsert = [];
-            
-            foreach ($request->permissions as $permissionName) {
-                // Buscar ID de la URL
-                $urlId = null;
-                $url = DB::table('urls')->where('name', $permissionName)->first();
-                if ($url) {
-                    $urlId = $url->id ?? $url->ID ?? $url->Id ?? null;
+            // Validación básica
+            if (!$request->email) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email requerido',
+                ], 400);
+            }
+
+            // Buscar usuario
+            $user = DB::table('users')->where('email', $request->email)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado: ' . $request->email,
+                ], 404);
+            }
+
+            // Obtener ID del usuario
+            $userId = $user->id ?? $user->ID ?? $user->Id ?? $user->user_id ?? $user->UserID ?? $user->usuario_id ?? null;
+
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo identificar el ID del usuario',
+                ], 400);
+            }
+
+            // ✅ Obtener permisos existentes del usuario
+            $existingPermissions = DB::table('personal_permissions')
+                ->where('id_user', $userId)
+                ->pluck('name_permission')
+                ->toArray();
+
+            // ✅ VERIFICAR SI HAY DUPLICADOS
+            $duplicatePermissions = array_intersect($request->permissions, $existingPermissions);
+
+            if (!empty($duplicatePermissions)) {
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El usuario ya cuenta con algunos permisos seleccionados',
+                    'error_type' => 'duplicate_permissions',
+                    'duplicate_permissions' => array_values($duplicatePermissions), // ✅ Lista de duplicados
+                    'existing_permissions' => $existingPermissions, // ✅ Todos los permisos existentes
+                    'user_info' => [
+                        'id' => $userId,
+                        'name' => $user->name ?? $user->Name ?? $user->nombre ?? '',
+                        'email' => $user->email ?? $user->Email ?? '',
+                    ]
+                ], 409); // ✅ 409 Conflict - indica que hay duplicados
+            }
+
+            // ✅ SOLO SI NO HAY DUPLICADOS - Insertar todos los permisos
+            $insertedCount = 0;
+
+            if (!empty($request->permissions) && is_array($request->permissions)) {
+                $permissionsToInsert = [];
+
+                foreach ($request->permissions as $permissionName) {
+                    // Buscar ID de la URL
+                    $urlId = null;
+                    $url = DB::table('urls')->where('name', $permissionName)->first();
+                    if ($url) {
+                        $urlId = $url->id ?? $url->ID ?? $url->Id ?? null;
+                    }
+
+                    $permissionsToInsert[] = [
+                        'id_urls' => $urlId,
+                        'name_permission' => $permissionName,
+                        'id_user' => $userId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
 
-                $permissionsToInsert[] = [
-                    'id_urls' => $urlId,
-                    'name_permission' => $permissionName,
-                    'id_user' => $userId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                if (!empty($permissionsToInsert)) {
+                    DB::table('personal_permissions')->insert($permissionsToInsert);
+                    $insertedCount = count($permissionsToInsert);
+                }
             }
-            
-            if (!empty($permissionsToInsert)) {
-                DB::table('personal_permissions')->insert($permissionsToInsert);
-                $insertedCount = count($permissionsToInsert);
-                \Log::info('Permisos insertados: ' . $insertedCount);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permisos agregados correctamente',
+                'user_id' => $userId,
+                'permissions_added' => $insertedCount,
+                'permissions_list' => $request->permissions
+            ]);
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error interno del servidor',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    //agregado recien M.
+    public function removePermissionsByEmail(Request $request)
+    {
+        try {
+
+            // Validación
+            if (!$request->email) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email requerido',
+                ], 400);
             }
+
+            if (empty($request->permissions) || !is_array($request->permissions)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lista de permisos a eliminar requerida',
+                ], 400);
+            }
+
+            // Buscar usuario
+            $user = DB::table('users')->where('email', $request->email)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado: ' . $request->email,
+                ], 404);
+            }
+
+            // Encontrar el ID correcto
+            $userId = $user->id ?? $user->ID ?? $user->Id ?? $user->user_id ?? $user->UserID ?? $user->usuario_id ?? null;
+
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error: No se pudo identificar el ID del usuario',
+                ], 400);
+            }
+
+            // ELIMINAR solo los permisos específicos (no todos)
+            $deletedCount = DB::table('personal_permissions')
+                ->where('id_user', $userId)
+                ->whereIn('name_permission', $request->permissions)
+                ->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Permisos eliminados correctamente',
+                'user_id' => $userId,
+                'permissions_removed' => $deletedCount,
+                'removed_permissions' => $request->permissions
+            ]);
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error interno del servidor',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Permisos agregados correctamente',
-            'user_id' => $userId,
-            'permissions_added' => $insertedCount,
-            'permissions_list' => $request->permissions
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('ERROR: ' . $e->getMessage());
-        \Log::error('FILE: ' . $e->getFile() . ' LINE: ' . $e->getLine());
-        
-        return response()->json([
-            'success' => false,
-            'error' => 'Error interno del servidor',
-            'message' => $e->getMessage()
-        ], 500);
     }
-}
-
-//agregado recien M.
-public function removePermissionsByEmail(Request $request)
-{
-    try {
-        \Log::info('=== REMOVE PERMISSIONS START ===');
-        \Log::info('Email recibido: ' . $request->email);
-        \Log::info('Permisos a eliminar: ', $request->permissions ?: []);
-
-        // Validación
-        if (!$request->email) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email requerido',
-            ], 400);
-        }
-
-        if (empty($request->permissions) || !is_array($request->permissions)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Lista de permisos a eliminar requerida',
-            ], 400);
-        }
-
-        // Buscar usuario
-        $user = DB::table('users')->where('email', $request->email)->first();
-
-        if (!$user) {
-            \Log::error('Usuario NO encontrado: ' . $request->email);
-            return response()->json([
-                'success' => false,
-                'message' => 'Usuario no encontrado: ' . $request->email,
-            ], 404);
-        }
-
-        // Encontrar el ID correcto
-        $userId = $user->id ?? $user->ID ?? $user->Id ?? $user->user_id ?? $user->UserID ?? $user->usuario_id ?? null;
-
-        if (!$userId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: No se pudo identificar el ID del usuario',
-            ], 400);
-        }
-
-        \Log::info('Eliminando permisos para usuario ID: ' . $userId);
-
-        // ELIMINAR solo los permisos específicos (no todos)
-        $deletedCount = DB::table('personal_permissions')
-            ->where('id_user', $userId)
-            ->whereIn('name_permission', $request->permissions)
-            ->delete();
-
-        \Log::info('Permisos eliminados: ' . $deletedCount);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Permisos eliminados correctamente',
-            'user_id' => $userId,
-            'permissions_removed' => $deletedCount,
-            'removed_permissions' => $request->permissions
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('ERROR removePermissionsByEmail: ' . $e->getMessage());
-        \Log::error('FILE: ' . $e->getFile() . ' LINE: ' . $e->getLine());
-        
-        return response()->json([
-            'success' => false,
-            'error' => 'Error interno del servidor',
-            'message' => $e->getMessage()
-        ], 500);
-    }
-}
 }
