@@ -795,19 +795,14 @@ class PacienteController extends Controller
     }
 }
 
-    public function getPacientesEdad()
-    {
-        try {
-            $userId = Auth::id();
-            $psicologo = Psicologo::where("user_id", $userId)->first();
+   public function getPacientesEdad()
+{
+    try {
+        $userId = Auth::id();
+        $psicologo = Psicologo::where("user_id", $userId)->first();
 
-            if (!$psicologo) {
-                return HttpResponseHelper::make()
-                    ->unauthorizedResponse("No se tiene acceso como psicólogo.")
-                    ->send();
-            }
-
-            // Calcula edades y agrupar por rangos desde la bd :3
+        // Si es psicólogo, filtrar por sus pacientes
+        if ($psicologo) {
             $estadisticas = Paciente::selectRaw("
                     CASE
                         WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) <= 12 THEN '0-12'
@@ -822,35 +817,47 @@ class PacienteController extends Controller
                 ->where("idPsicologo", $psicologo->idPsicologo)
                 ->groupBy("rango")
                 ->pluck("total", "rango");
-
-            return HttpResponseHelper::make()
-                ->successfulResponse(
-                    "Estadísticas de pacientes por rango de edad obtenidas correctamente",
-                    $estadisticas
-                )
-                ->send();
-        } catch (\Exception $e) {
-            return HttpResponseHelper::make()
-                ->internalErrorResponse(
-                    "Ocurrió un problema al procesar la solicitud. " .
-                        $e->getMessage()
-                )
-                ->send();
+        } else {
+            // Si es ADMIN, obtener estadísticas de todos los pacientes
+            $estadisticas = Paciente::selectRaw("
+                    CASE
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) <= 12 THEN '0-12'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 13 AND 17 THEN '13-17'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 18 AND 24 THEN '18-24'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 25 AND 34 THEN '25-34'
+                        WHEN TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE()) BETWEEN 35 AND 44 THEN '35-44'
+                        ELSE '45+'
+                    END as rango,
+                    COUNT(*) as total
+                ")
+                ->groupBy("rango")
+                ->pluck("total", "rango");
         }
+
+        return HttpResponseHelper::make()
+            ->successfulResponse(
+                "Estadísticas de pacientes por rango de edad obtenidas correctamente",
+                $estadisticas
+            )
+            ->send();
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse(
+                "Ocurrió un problema al procesar la solicitud. " .
+                    $e->getMessage()
+            )
+            ->send();
     }
+}
 
     public function getPacientesLugar()
-    {
-        try {
-            $userId = Auth::id();
-            $psicologo = Psicologo::where("user_id", $userId)->first();
+{
+    try {
+        $userId = Auth::id();
+        $psicologo = Psicologo::where("user_id", $userId)->first();
 
-            if (!$psicologo) {
-                return HttpResponseHelper::make()
-                    ->unauthorizedResponse("No se tiene acceso como psicólogo.")
-                    ->send();
-            }
-
+        // Mantener la misma lógica original para psicólogos
+        if ($psicologo) {
             $estadisticas = Paciente::where(
                 "idPsicologo",
                 $psicologo->idPsicologo
@@ -859,22 +866,29 @@ class PacienteController extends Controller
                 ->select("pais", DB::raw("count(*) as total"))
                 ->groupBy("pais")
                 ->pluck("total", "pais");
-
-            return HttpResponseHelper::make()
-                ->successfulResponse(
-                    "Estadísticas de pacientes por lugar obtenidas correctamente",
-                    $estadisticas
-                )
-                ->send();
-        } catch (\Exception $e) {
-            return HttpResponseHelper::make()
-                ->internalErrorResponse(
-                    "Ocurrió un problema al procesar la solicitud. " .
-                        $e->getMessage()
-                )
-                ->send();
+        } else {
+            // Nueva funcionalidad para ADMIN - misma lógica pero sin filtrar por psicólogo
+            $estadisticas = Paciente::whereNotNull("pais")
+                ->select("pais", DB::raw("count(*) as total"))
+                ->groupBy("pais")
+                ->pluck("total", "pais");
         }
+
+        return HttpResponseHelper::make()
+            ->successfulResponse(
+                "Estadísticas de pacientes por lugar obtenidas correctamente",
+                $estadisticas
+            )
+            ->send();
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse(
+                "Ocurrió un problema al procesar la solicitud. " .
+                    $e->getMessage()
+            )
+            ->send();
     }
+}
 
     //Uso exclusivo para que Sandro se consuma, todos los pacientes quiere ver
     public function getAllPacientes(){

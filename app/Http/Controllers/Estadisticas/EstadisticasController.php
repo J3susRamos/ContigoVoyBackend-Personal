@@ -11,19 +11,62 @@ use App\Traits\HttpResponseHelper;
 
 class EstadisticasController extends Controller
 {
+    public function statistics()
+    {
+        try {
+            $userId = Auth::id();
+            
+            // Verificar si el usuario es psicólogo
+            $psicologo = Psicologo::where('user_id', $userId)->first();
+            
+            if ($psicologo) {
+                // Usuario es PSICOLOGO - estadísticas de sus pacientes
+                $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
+            } else {
+                // Usuario es ADMIN (u otro rol autorizado) - estadísticas de todos los pacientes
+                $pacientes = Paciente::all();
+            }
+
+            // Lógica de estadísticas generales
+            $total = $pacientes->count();
+            $estadisticasGenero = $pacientes->groupBy('genero')->map(function ($items) use ($total) {
+                return [
+                    'cantidad' => $items->count(),
+                    'porcentaje' => $total > 0 ? round(($items->count() / $total) * 100) : 0
+                ];
+            });
+
+            $estadisticas = [
+                'total_pacientes' => $total,
+                'por_genero' => $estadisticasGenero,
+            ];
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Estadísticas obtenidas correctamente', $estadisticas)
+                ->send();
+            
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Ocurrió un problema al procesar la solicitud. ' . $e->getMessage())
+                ->send();
+        }
+    }
+
     public function porcentajePacientesPorGenero()
     {
         try {
             $userId = Auth::id();
+            
+            // Verificar si el usuario es psicólogo
             $psicologo = Psicologo::where('user_id', $userId)->first();
-
-            if (!$psicologo) {
-                return HttpResponseHelper::make()
-                    ->unauthorizedResponse('No se tiene acceso como psicólogo.')
-                    ->send();
+            
+            if ($psicologo) {
+                // Usuario es PSICOLOGO - estadísticas de sus pacientes
+                $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
+            } else {
+                // Usuario es ADMIN (u otro rol autorizado) - estadísticas de todos los pacientes
+                $pacientes = Paciente::all();
             }
-
-            $pacientes = Paciente::where('idPsicologo', $psicologo->idPsicologo)->get();
 
             $total = $pacientes->count();
             if ($total === 0) {
