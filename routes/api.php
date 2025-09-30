@@ -24,6 +24,7 @@ use App\Http\Controllers\Disponibilidad\DisponibilidadController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Urls\UrlsController;
 use App\Http\Controllers\NotificationAdminController;
+use App\Http\Controllers\PersonalPermissionController; //<--Agregado M.
 
 // 🚀 RUTAS DE NOTIFICACIONES AUTOMÁTICAS
 Route::controller(NotificationAdminController::class)
@@ -84,19 +85,25 @@ Route::controller(ContactosController::class)
 Route::controller(PersonalController::class)
     ->prefix("personal")
     ->group(function () {
-        Route::group(
-            [
-                "middleware" => [
-                    "auth:sanctum",
-                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
-                ],
+        Route::group([
+            "middleware" => [
+                "auth:sanctum",
+                "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
             ],
-            function () {
-                Route::post("/", "createPersonal"); // crear personal
-                Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
-            },
-        );
+        ], function () {
+            Route::post("/", "createPersonal");
+            Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
+            
+            // Rutas para gestión de permisos AGREGADOS RECIEN M.
+            Route::get("/permissions/by-email/{email}", "getPermissionsByEmail");
+            Route::put("/permissions/update-by-email", "updatePermissionsByEmail");
+
+
+             // ✅ NUEVA RUTA PARA QUITAR PERMISOS 
+            Route::delete("/permissions/remove-by-email", "removePermissionsByEmail");
+        });
     });
+
 
 Route::controller(UrlsController::class)
     ->prefix("urls")
@@ -479,4 +486,6 @@ Route::controller(DisponibilidadController::class)
             },
         );
     });
+
+
 
