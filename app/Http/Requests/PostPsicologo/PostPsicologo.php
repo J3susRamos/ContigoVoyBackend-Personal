@@ -27,7 +27,7 @@ class PostPsicologo extends FormRequest
             'pais' => 'required|string|max:100',
             'genero' => 'required|string|max:50',
             'experiencia' => 'nullable|integer',
-            'especialidades' => 'nullable|array|min:1|max:3',
+            'especialidades' => 'nullable|array|min:0|max:3',
             'horario' => 'required|array',
             'horario.*' => 'array',
             'horario.*.*' => 'array|size:2',
