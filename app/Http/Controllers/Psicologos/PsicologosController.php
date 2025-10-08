@@ -99,8 +99,8 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'user'])->whereHas('user', function($q){
-                $q->where("estado",1);
+            $query = Psicologo::with(['especialidades', 'user'])->whereHas('user', function ($q) {
+                $q->where("estado", 1);
             });
 
             if ($request->filled("pais")) {
@@ -169,13 +169,13 @@ class PsicologosController extends Controller
 
     public function listarNombre(): JsonResponse
     {
-        try{
+        try {
             $psicologos = Psicologo::with('user')
-                ->whereHas('user', function($q){
-                $q->where("estado",1);
+                ->whereHas('user', function ($q) {
+                    $q->where("estado", 1);
                 })
                 ->get(['idPsicologo', 'user_id'])
-                ->map(function($psicologo){
+                ->map(function ($psicologo) {
                     return [
                         'idPsicologo' => $psicologo->idPsicologo,
                         'nombre' => $psicologo->user->name,
@@ -185,7 +185,7 @@ class PsicologosController extends Controller
             return HttpResponseHelper::make()
                 ->successfulResponse("Psicólogos obtenidos correctamente", $psicologos)
                 ->send();
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
                 ->send();
@@ -198,8 +198,8 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'user'])->whereHas('user', function($q){
-                $q->where("estado",0);
+            $query = Psicologo::with(['especialidades', 'user'])->whereHas('user', function ($q) {
+                $q->where("estado", 0);
             });
 
             if ($request->filled("pais")) {
@@ -393,25 +393,26 @@ class PsicologosController extends Controller
     }
 
     //Obtener las especialidades de un psicologo
-    public function obtenerEspecialidades(int $id): JsonResponse{
+    public function obtenerEspecialidades(int $id): JsonResponse
+    {
         try {
             $psicologo = Psicologo::with('especialidades')->find($id);
 
             if (!$psicologo) {
-            return HttpResponseHelper::make()
-                ->notFoundResponse('No se encontró un psicólogo con el ID proporcionado.')
-                ->send();
+                return HttpResponseHelper::make()
+                    ->notFoundResponse('No se encontró un psicólogo con el ID proporcionado.')
+                    ->send();
             }
 
             $especialidades = $psicologo->especialidades->pluck('nombre');
 
             return HttpResponseHelper::make()
-            ->successfulResponse('Especialidades obtenidas correctamente', $especialidades)
-            ->send();
+                ->successfulResponse('Especialidades obtenidas correctamente', $especialidades)
+                ->send();
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
-            ->internalErrorResponse('Ocurrió un problema al obtener las especialidades: ' . $e->getMessage())
-            ->send();
+                ->internalErrorResponse('Ocurrió un problema al obtener las especialidades: ' . $e->getMessage())
+                ->send();
         }
     }
 
@@ -433,7 +434,7 @@ class PsicologosController extends Controller
                 return HttpResponseHelper::make()
                     ->successfulResponse(
                         'Estado del usuario del psicólogo cambiado correctamente a ' .
-                        ($psicologo->user->estado === '1' ? 'Activo' : 'Inactivo')
+                            ($psicologo->user->estado === '1' ? 'Activo' : 'Inactivo')
                     )
                     ->send();
             } else {
@@ -503,46 +504,44 @@ class PsicologosController extends Controller
     public function DeletePsicologo(int $id): JsonResponse
     {
         try {
-        DB::beginTransaction();
+            DB::beginTransaction();
 
-        // Buscar el psicólogo
-        $psicologo = Psicologo::find($id);
+            // Buscar el psicólogo
+            $psicologo = Psicologo::find($id);
 
-        if (!$psicologo) {
+            if (!$psicologo) {
+                return response()->json([
+                    'status_code' => 404,
+                    'status_message' => 'Psicólogo no encontrado',
+                ], 404);
+            }
+
+            // Eliminar citas asociadas
+            DB::table('citas')->where('idPsicologo', $psicologo->idPsicologo)->delete();
+
+            // Obtener el user_id del psicólogo
+            $userId = $psicologo->user_id;
+
+            // Eliminar el psicólogo
+            DB::table('psicologos')->where('idPsicologo', $id)->delete();
+
+            // Eliminar el usuario
+            DB::table('users')->where('user_id', $userId)->delete();
+
+            DB::commit();
+
             return response()->json([
-                'status_code' => 404,
-                'status_message' => 'Psicólogo no encontrado',
-            ], 404);
+                'status_code' => 200,
+                'status_message' => 'Psicólogo, sus citas y su usuario eliminados correctamente',
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status_code' => 500,
+                'status_message' => 'Internal Server Error',
+                'description' => 'Ocurrió un problema al eliminar el psicólogo: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Eliminar citas asociadas
-        DB::table('citas')->where('idPsicologo', $psicologo->idPsicologo)->delete();
-
-        // Obtener el user_id del psicólogo
-        $userId = $psicologo->user_id;
-
-        // Eliminar el psicólogo
-        DB::table('psicologos')->where('idPsicologo', $id)->delete();
-
-        // Eliminar el usuario
-        DB::table('users')->where('user_id', $userId)->delete();
-
-        DB::commit();
-
-        return response()->json([
-            'status_code' => 200,
-            'status_message' => 'Psicólogo, sus citas y su usuario eliminados correctamente',
-        ], 200);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-
-        return response()->json([
-            'status_code' => 500,
-            'status_message' => 'Internal Server Error',
-            'description' => 'Ocurrió un problema al eliminar el psicólogo: ' . $e->getMessage(),
-        ], 500);
     }
-    }
-
 }
