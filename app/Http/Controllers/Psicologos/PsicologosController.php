@@ -58,7 +58,7 @@ class PsicologosController extends Controller
     public function showById(int $id): JsonResponse
     {
         try {
-            $psicologo = Psicologo::with(['especialidades', 'user'])->find($id);
+            $psicologo = Psicologo::with(['especialidades', 'users'])->find($id);
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
@@ -70,14 +70,14 @@ class PsicologosController extends Controller
                 // se modifico 'Titulo' a 'titulo'
                 'idPsicologo' => $psicologo->idPsicologo,
                 'titulo' => $psicologo->titulo,
-                'nombre' => $psicologo->user->name,
-                'apellido' => $psicologo->user->apellido,
+                'nombre' => $psicologo->users->name,
+                'apellido' => $psicologo->users->apellido,
                 'pais' => $psicologo->pais,
                 'genero' => $psicologo->genero,
-                'correo' => $psicologo->user->email,
-                'contraseña' => $psicologo->user->password,
-                'imagen' => $psicologo->user->imagen,
-                'fecha_nacimiento' => $psicologo->user->fecha_nacimiento->format('d/m/Y'),
+                'correo' => $psicologo->users->email,
+                'contraseña' => $psicologo->users->password,
+                'imagen' => $psicologo->users->imagen,
+                'fecha_nacimiento' => $psicologo->users->fecha_nacimiento->format('d/m/Y'),
                 'especialidades' => $psicologo->especialidades->pluck('nombre'),
                 'introduccion' => $psicologo->introduccion,
                 'experiencia' => $psicologo->experiencia,
@@ -99,7 +99,7 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'user'])->whereHas('user', function ($q) {
+            $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function ($q) {
                 $q->where("estado", 1);
             });
 
@@ -170,16 +170,16 @@ class PsicologosController extends Controller
     public function listarNombre(): JsonResponse
     {
         try {
-            $psicologos = Psicologo::with('user')
-                ->whereHas('user', function ($q) {
+            $psicologos = Psicologo::with('users')
+                ->whereHas('users', function ($q) {
                     $q->where("estado", 1);
                 })
                 ->get(['idPsicologo', 'user_id'])
                 ->map(function ($psicologo) {
                     return [
                         'idPsicologo' => $psicologo->idPsicologo,
-                        'nombre' => $psicologo->user->name,
-                        'apellido' => $psicologo->user->apellido,
+                        'nombre' => $psicologo->users->name,
+                        'apellido' => $psicologo->users->apellido,
                     ];
                 });
             return HttpResponseHelper::make()
@@ -198,7 +198,7 @@ class PsicologosController extends Controller
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'user'])->whereHas('user', function ($q) {
+            $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function ($q) {
                 $q->where("estado", 0);
             });
 
@@ -226,7 +226,7 @@ class PsicologosController extends Controller
 
             if ($request->filled("search")) {
                 $search = $request->query("search");
-                $query->whereHas("user", function ($q) use ($search) {
+                $query->whereHas("users", function ($q) use ($search) {
                     $q->where("name", "like", "%{$search}%")
                         ->orWhere("apellido", "like", "%{$search}%");
                 });
@@ -271,17 +271,17 @@ class PsicologosController extends Controller
         return [
             'idPsicologo' => $psicologo->idPsicologo,
             'titulo' => $psicologo->titulo,
-            'nombre' => $psicologo->user->name,
-            'apellido' => $psicologo->user->apellido,
+            'nombre' => $psicologo->users->name,
+            'apellido' => $psicologo->users->apellido,
             'pais' => $psicologo->pais,
-            'edad' => $psicologo->user->edad,
+            'edad' => $psicologo->users->edad,
             'genero' => $psicologo->genero,
             'experiencia' => $psicologo->experiencia,
             'especialidades' => $psicologo->especialidades->pluck('nombre'),
             'introduccion' => $psicologo->introduccion,
             'horario' => $psicologo->horario,
-            'correo' => $psicologo->user->email,
-            'imagen' => $psicologo->user->imagen,
+            'correo' => $psicologo->users->email,
+            'imagen' => $psicologo->users->imagen,
         ];
     }
 
@@ -419,7 +419,7 @@ class PsicologosController extends Controller
     public function cambiarEstadoPsicologo(int $id): JsonResponse
     {
         try {
-            $psicologo = Psicologo::with('user')->find($id);
+            $psicologo = Psicologo::with('users')->find($id);
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
@@ -427,14 +427,14 @@ class PsicologosController extends Controller
                     ->send();
             }
 
-            if ($psicologo->user) {
-                $psicologo->user->estado = $psicologo->user->estado === '0' ? '1' : '0';
-                $psicologo->user->save();
+            if ($psicologo->users) {
+                $psicologo->users->estado = $psicologo->users->estado == 0 ? 1 : 0;
+                $psicologo->users->save();
 
                 return HttpResponseHelper::make()
                     ->successfulResponse(
                         'Estado del usuario del psicólogo cambiado correctamente a ' .
-                            ($psicologo->user->estado === '1' ? 'Activo' : 'Inactivo')
+                            ($psicologo->users->estado === 1 ? 'Activo' : 'Inactivo')
                     )
                     ->send();
             } else {
