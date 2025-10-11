@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Contactos;
 
 use App\Http\Controllers\Controller;
-use App\Models\contactos;
+use App\Models\Contactos;
 use App\Http\Requests\PostContactos\PostContactos;
 use App\Traits\HttpResponseHelper;
 use App\Mail\ContactoMailable;
