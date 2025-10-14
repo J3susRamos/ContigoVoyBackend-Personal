@@ -29,7 +29,7 @@ class ConfirmacionPrePaciente extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-             subject: 'Confirmación de tu primera cita en Centro Psicológico Contigo Voy'
+             subject: '🌿¡Gracias por dar este paso hacia tu bienestar! 💜',
         );
     }
 
