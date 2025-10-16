@@ -113,8 +113,9 @@
         </div>
         <div class="content">
             <p>Hola <span class="highlight">{{ $datos['nombre'] ?? 'Paciente' }}</span>,</p>
-
-            <p>Gracias por separar tu cita en <strong>Centro Psicológico Contigo Voy</strong>. A continuación encontrarás los detalles:</p>
+            <p>Nos alegra acompañarte en este proceso de crecimiento personasl. 🌱</p>
+            <p>Gracias por confiar en <strong>Centro Psicológico Contigo Voy</strong>.</p>
+            <p>A continuación encontrarás los detalles:</p>
 
             <div class="info-box">
                 <ul>

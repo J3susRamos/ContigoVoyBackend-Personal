@@ -23,6 +23,22 @@ use App\Http\Controllers\Personal\PersonalController;
 use App\Http\Controllers\Disponibilidad\DisponibilidadController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Urls\UrlsController;
+use App\Http\Controllers\NotificationAdminController;
+use App\Http\Controllers\PersonalPermissionController; //<--Agregado M.
+
+// 🚀 RUTAS DE NOTIFICACIONES AUTOMÁTICAS
+Route::controller(NotificationAdminController::class)
+    ->prefix("notifications")
+    ->middleware("auth:sanctum")
+    ->group(function () {
+        Route::get("/", "index");
+        Route::get("/stats", "getStats");
+        Route::get("/dashboard", "dashboard");
+        Route::post("/process", "processNow");
+        Route::post("/{id}/resend", "resend");
+        Route::post("/appointment/{citaId}/schedule", "scheduleForAppointment");
+        Route::delete("/appointment/{citaId}/cancel", "cancelForAppointment");
+    });
 
 Route::controller(UserController::class)
     ->prefix("users")
@@ -30,12 +46,15 @@ Route::controller(UserController::class)
         Route::get("/get", "getUsersByRole");
 
         // Nuevas rutas para gestión de trabajadores (solo ADMIN)
-        Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN']], function () {
-            Route::get("/workers", "getAllWorkers");
-            Route::post("/change-role", "changeUserRole");
-            Route::post("/toggle-status", "toggleUserStatus");
-            Route::get("/workers/stats", "getWorkersStats");
-        });
+        Route::group(
+            ["middleware" => ["auth:sanctum", "role:ADMIN"]],
+            function () {
+                Route::get("/workers", "getAllWorkers");
+                Route::post("/change-role", "changeUserRole");
+                Route::post("/toggle-status", "toggleUserStatus");
+                Route::get("/workers/stats", "getWorkersStats");
+            },
+        );
     });
 
 Route::controller(AuthController::class)
@@ -66,19 +85,25 @@ Route::controller(ContactosController::class)
 Route::controller(PersonalController::class)
     ->prefix("personal")
     ->group(function () {
-        Route::group(
-            [
-                "middleware" => [
-                    "auth:sanctum",
-                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
-                ],
+        Route::group([
+            "middleware" => [
+                "auth:sanctum",
+                "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
             ],
-            function () {
-                Route::post("/", "createPersonal"); // crear personal
-                Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
-            },
-        );
+        ], function () {
+            Route::post("/", "createPersonal");
+            Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
+            
+            // Rutas para gestión de permisos AGREGADOS RECIEN M.
+            Route::get("/permissions/by-email/{email}", "getPermissionsByEmail");
+            Route::put("/permissions/update-by-email", "updatePermissionsByEmail");
+
+
+             // ✅ NUEVA RUTA PARA QUITAR PERMISOS 
+            Route::delete("/permissions/remove-by-email", "removePermissionsByEmail");
+        });
     });
+
 
 Route::controller(UrlsController::class)
     ->prefix("urls")
@@ -360,7 +385,7 @@ Route::controller(PrePacienteController::class)
 
 Route::controller(EstadisticasController::class)
     ->prefix("estadisticas")
-    ->middleware(["auth:sanctum", "role:PSICOLOGO"])
+    ->middleware(["auth:sanctum", "role:PSICOLOGO|ADMIN"]) //se agrego admin tambien
     ->group(function () {
         Route::get("/", "statistics");
         Route::get("/porcentaje-genero", "porcentajePacientesPorGenero");
@@ -382,7 +407,7 @@ Route::controller(MarketingController::class)
         Route::get("/pacientes-emails", "listarEmailsPacientes");
     });
 
-// WhatsApp routes
+// WhatsApp routes (usando whatsapp-service con Baileys)
 Route::prefix("whatsapp")->group(function () {
     // Enviar mensajes
     Route::post("send-confirmation", [
@@ -404,8 +429,16 @@ Route::prefix("whatsapp")->group(function () {
         "webhook",
     ]);
 
-    // Estado del servicio
+    // Estado del servicio y gestión
     Route::get("status", [WhatsAppController::class, "status"]);
+    Route::get("qr-code", [WhatsAppController::class, "getQrCode"]);
+    Route::post("qr-request", [WhatsAppController::class, "requestNewQr"]);
+    Route::post("force-reconnect", [
+        WhatsAppController::class,
+        "forceReconnect",
+    ]);
+    Route::post("reset-auth", [WhatsAppController::class, "resetAuth"]);
+    Route::get("sent-messages", [WhatsAppController::class, "getSentMessages"]);
 });
 
 Route::controller(BoucherController::class)

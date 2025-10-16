@@ -17,9 +17,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
+use App\Services\AutomatedNotificationService;
 
 class CitaController extends Controller
 {
+    private $notificationService;
+
+    public function __construct(
+        AutomatedNotificationService $notificationService,
+    ) {
+        $this->notificationService = $notificationService;
+    }
     public function createCita(PostCita $request)
     {
         try {
@@ -29,7 +37,9 @@ class CitaController extends Controller
             $data = $request->validated();
 
             $fechaHoy = Carbon::today();
-            $fechaCita = Carbon::parse($request->fecha_cita . ' ' . $request->hora_cita);
+            $fechaCita = Carbon::parse(
+                $request->fecha_cita . " " . $request->hora_cita,
+            );
             $fechaLimite = Carbon::parse($request->fecha_limite);
 
             if ($fechaCita->lte($fechaHoy)) {
@@ -81,6 +91,24 @@ class CitaController extends Controller
 
             $cita = Cita::create($data);
 
+            // 🚀 Programar notificaciones automáticas para la nueva cita
+            try {
+                $this->notificationService->programarNotificacionesPorCita(
+                    $cita->idCita,
+                );
+                Log::info(
+                    "Notificaciones programadas para cita: " . $cita->idCita,
+                );
+            } catch (\Exception $e) {
+                Log::error(
+                    "Error al programar notificaciones para cita " .
+                        $cita->idCita .
+                        ": " .
+                        $e->getMessage(),
+                );
+                // No falla la creación de la cita por error en notificaciones
+            }
+
             Artisan::call("app:cancelar-citas-sin-pagar");
 
             return HttpResponseHelper::make()
@@ -121,7 +149,11 @@ class CitaController extends Controller
                         ->where("estado", "aceptado");
                 },
             ])
-                ->whereNotIn("estado_Cita", ["Sin pagar", "Cancelada", "Reprogramada"])
+                ->whereNotIn("estado_Cita", [
+                    "Sin pagar",
+                    "Cancelada",
+                    "Reprogramada",
+                ])
                 ->get();
 
             $result = $citas->map(function ($cita) {
@@ -398,125 +430,159 @@ class CitaController extends Controller
             $psicologo = Psicologo::where("user_id", $userId)->first();
 
             if (!$psicologo) {
-                return response()->json([
-                    'status_code' => 404,
-                    'status_message' => 'Not Found',
-                    'description' => 'Psicólogo no encontrado.',
-                    'result' => null,
-                    'errorBag' => []
-                ], 404);
+                return response()->json(
+                    [
+                        "status_code" => 404,
+                        "status_message" => "Not Found",
+                        "description" => "Psicólogo no encontrado.",
+                        "result" => null,
+                        "errorBag" => [],
+                    ],
+                    404,
+                );
             }
 
-            $idCita = $request->input('idCita');
+            $idCita = $request->input("idCita");
 
             if (!$idCita) {
-                return response()->json([
-                    'status_code' => 500,
-                    'status_message' => 'Internal serve',
-                    'description' => 'Error al recibir la cita',
-                ], 500);
+                return response()->json(
+                    [
+                        "status_code" => 500,
+                        "status_message" => "Internal serve",
+                        "description" => "Error al recibir la cita",
+                    ],
+                    500,
+                );
             }
 
-            $cita = Cita::where('idCita', $idCita)
-                ->where('estado_Cita', 'Pendiente')
+            $cita = Cita::where("idCita", $idCita)
+                ->where("estado_Cita", "Pendiente")
                 ->first();
 
             if (!$cita) {
-                return response()->json([
-                    'status_code' => 500,
-                    'status_message' => 'Internal serve',
-                    'description' => 'Error al recibir la cita',
-                ], 500);
+                return response()->json(
+                    [
+                        "status_code" => 500,
+                        "status_message" => "Internal serve",
+                        "description" => "Error al recibir la cita",
+                    ],
+                    500,
+                );
             }
 
-            $cita->estado_Cita = 'Realizado';
-            $cita->jitsi_url = Null;
+            $cita->estado_Cita = "Realizado";
+            $cita->jitsi_url = null;
             $cita->save();
 
             $result = [
-                'estado_Cita' => $cita->estado_Cita,
+                "estado_Cita" => $cita->estado_Cita,
             ];
 
-            return response()->json([
-                'status_code' => 200,
-                'status_message' => 'Estado cambiado correctamente',
-                'description' => 'Videollamada eliminada corrrectamente',
-                'result' => $result
-            ], 200);
+            return response()->json(
+                [
+                    "status_code" => 200,
+                    "status_message" => "Estado cambiado correctamente",
+                    "description" => "Videollamada eliminada corrrectamente",
+                    "result" => $result,
+                ],
+                200,
+            );
         } catch (Exception $e) {
-            return response()->json([
-                'status_code' => 500,
-                'status_message' => 'Internal Server Error',
-                'description' => 'Error al marcar la cita como realizada: ' . $e->getMessage(),
-                'result' => null,
-                'errorBag' => []
-            ], 500);
+            return response()->json(
+                [
+                    "status_code" => 500,
+                    "status_message" => "Internal Server Error",
+                    "description" =>
+                        "Error al marcar la cita como realizada: " .
+                        $e->getMessage(),
+                    "result" => null,
+                    "errorBag" => [],
+                ],
+                500,
+            );
         }
     }
 
-    public function citaReprogramada(int $idCita){
-        try{
+    public function citaReprogramada(int $idCita)
+    {
+        try {
             $userId = Auth::id();
-            $paciente = Paciente::where('user_id', $userId)->first();
+            $paciente = Paciente::where("user_id", $userId)->first();
 
             if (!$paciente) {
-                return response()->json([
-                    'status_code' => 404,
-                    'status_message' => 'Not Found',
-                    'description' => 'Paciente no encontrado.',
-                    'result' => null,
-                    'errorBag' => []
-                ], 404);
+                return response()->json(
+                    [
+                        "status_code" => 404,
+                        "status_message" => "Not Found",
+                        "description" => "Paciente no encontrado.",
+                        "result" => null,
+                        "errorBag" => [],
+                    ],
+                    404,
+                );
             }
-
 
             if (!$idCita) {
-                return response()->json([
-                    'status_code' => 500,
-                    'status_message' => 'Internal serve',
-                    'description' => 'Error al recibir la cita, cita no encontrada',
-                ], 500);
+                return response()->json(
+                    [
+                        "status_code" => 500,
+                        "status_message" => "Internal serve",
+                        "description" =>
+                            "Error al recibir la cita, cita no encontrada",
+                    ],
+                    500,
+                );
             }
 
-            $cita = Cita::where('idCita', $idCita)
-                ->where('idPaciente',$paciente->idPaciente)
-                ->whereIn('estado_Cita', ['Pendiente',"Sin pagar"])
+            $cita = Cita::where("idCita", $idCita)
+                ->where("idPaciente", $paciente->idPaciente)
+                ->whereIn("estado_Cita", ["Pendiente", "Sin pagar"])
                 ->first();
 
             if (!$cita) {
-                return response()->json([
-                    'status_code' => 500,
-                    'status_message' => 'Internal serve',
-                    'description' => 'Error al recibir la cita',
-                ], 500);
+                return response()->json(
+                    [
+                        "status_code" => 500,
+                        "status_message" => "Internal serve",
+                        "description" => "Error al recibir la cita",
+                    ],
+                    500,
+                );
             }
 
-            $cita->estado_Cita = 'Reprogramada';
-            $cita->jitsi_url = Null;
+            $cita->estado_Cita = "Reprogramada";
+            $cita->jitsi_url = null;
             $cita->save();
 
             $result = [
-                'estado_Cita' => $cita->estado_Cita,
+                "estado_Cita" => $cita->estado_Cita,
             ];
 
-            return response()->json([
-                'status_code' => 200,
-                'success' => true,
-                'status_message' => 'Estado cambiado correctamente',
-                'description' => 'Videollamada eliminada corrrectamente',
-                'result' => $result
-            ], 200);
-        }catch(Exception $e){
-            return response()->json([
-                'status_code' => 500,
-                'status_message' => 'Internal Server Error',
-                'description' => 'Error al marcar la cita como reprogramada: ' . $e->getMessage(),
-                'result' => null,
-                'errorBag' => []
-            ], 500);
+            return response()->json(
+                [
+                    "status_code" => 200,
+                    "success" => true,
+                    "status_message" => "Estado cambiado correctamente",
+                    "description" => "Videollamada eliminada corrrectamente",
+                    "result" => $result,
+                ],
+                200,
+            );
+        } catch (Exception $e) {
+            return response()->json(
+                [
+                    "status_code" => 500,
+                    "status_message" => "Internal Server Error",
+                    "description" =>
+                        "Error al marcar la cita como reprogramada: " .
+                        $e->getMessage(),
+                    "result" => null,
+                    "errorBag" => [],
+                ],
+                500,
+            );
         }
     }
-
 
     public function rechazarBoucher(request $request)
     {
@@ -620,19 +686,20 @@ class CitaController extends Controller
             }
 
             if ($estadoBoucher) {
-                if($estadoBoucher == "Sin enviar"){
-                    $citasQuery->doesntHave('Boucher');
-                }else{
-                    $citasQuery->whereHas('boucher', function ($q) use ($estadoBoucher) {
-                        $q->where('estado', $estadoBoucher)
-                        ->whereRaw('boucher.created_at = (
-                            SELECT MAX(b2.created_at) 
-                            FROM boucher b2 
+                if ($estadoBoucher == "Sin enviar") {
+                    $citasQuery->doesntHave("Boucher");
+                } else {
+                    $citasQuery->whereHas("boucher", function ($q) use (
+                        $estadoBoucher,
+                    ) {
+                        $q->where("estado", $estadoBoucher)
+                            ->whereRaw('boucher.created_at = (
+                            SELECT MAX(b2.created_at)
+                            FROM boucher b2
                             WHERE b2.idCita = boucher.idCita
                         )');
                     });
                 }
-                
             }
 
             $citas = $citasQuery->paginate($perPage);
@@ -641,7 +708,12 @@ class CitaController extends Controller
             $currentPage = $citas->currentPage();
 
             if ($currentPage > $totalPages) {
-                $citas = $citasQuery->paginate($perPage, ['*'], 'page', $totalPages);
+                $citas = $citasQuery->paginate(
+                    $perPage,
+                    ["*"],
+                    "page",
+                    $totalPages,
+                );
             }
 
             $citas->getCollection()->transform(function ($cita) {
@@ -800,7 +872,7 @@ class CitaController extends Controller
                     return $this->mapCita($cita);
                 });
                 $data = $data->map(function ($d) {
-                    $d['motivo'] = Str::limit($d['motivo'], 20);
+                    $d["motivo"] = Str::limit($d["motivo"], 20);
                     return $d;
                 });
                 return HttpResponseHelper::make()
@@ -823,7 +895,7 @@ class CitaController extends Controller
                     return $this->mapCita($cita);
                 });
                 $data = $data->map(function ($d) {
-                    $d['motivo'] = Str::limit($d['motivo'], 20);
+                    $d["motivo"] = Str::limit($d["motivo"], 20);
                     return $d;
                 });
 
@@ -890,13 +962,16 @@ class CitaController extends Controller
 
             $cita = Cita::where("idCita", $id)->first();
             if (!$cita) {
-                return response()->json([
-                    'status_code' => 404,
-                    'status_message' => 'Not Found',
-                    'description' => 'Cita no encontrada.',
-                    'result' => null,
-                    'errorBag' => []
-                ], 404);
+                return response()->json(
+                    [
+                        "status_code" => 404,
+                        "status_message" => "Not Found",
+                        "description" => "Cita no encontrada.",
+                        "result" => null,
+                        "errorBag" => [],
+                    ],
+                    404,
+                );
             }
 
             if ($cita->idPaciente != $paciente->idPaciente) {
@@ -913,20 +988,21 @@ class CitaController extends Controller
                 );
             }
 
-
-            $cita = Cita::with(['bouchers','psicologo'])->find($id);
+            $cita = Cita::with(["bouchers", "psicologo"])->find($id);
 
             $bouchersCitas = $cita->toArray();
 
             if ($cita->psicologo && $cita->psicologo->users) {
-                $bouchersCitas['nombrePsicologo'] = $cita->psicologo->users->name;
-                $bouchersCitas['apellidoPsicologo'] = $cita->psicologo->users->apellido;
+                $bouchersCitas["nombrePsicologo"] =
+                    $cita->psicologo->users->name;
+                $bouchersCitas["apellidoPsicologo"] =
+                    $cita->psicologo->users->apellido;
             } else {
-                $bouchersCitas['nombrePsicologo'] = null;
-                $bouchersCitas['apellidoPsicologo'] = null;
+                $bouchersCitas["nombrePsicologo"] = null;
+                $bouchersCitas["apellidoPsicologo"] = null;
             }
 
-            unset($bouchersCitas['psicologo']);
+            unset($bouchersCitas["psicologo"]);
 
             return response()->json(
                 [
@@ -1035,7 +1111,53 @@ class CitaController extends Controller
     {
         try {
             $cita = Cita::findOrFail($id);
+            $estadoAnterior = $cita->estado_Cita;
+
             $cita->update($request->all());
+
+            // 🚀 Manejar notificaciones cuando se actualiza la cita
+            try {
+                // Si se cancela o reprograma la cita, cancelar notificaciones pendientes
+                if (
+                    in_array($cita->estado_Cita, [
+                        "Cancelada",
+                        "Reprogramada",
+                        "No asistió",
+                    ])
+                ) {
+                    $this->notificationService->cancelarNotificacionesCita(
+                        $cita->idCita,
+                    );
+                    Log::info(
+                        "Notificaciones canceladas para cita actualizada: " .
+                            $cita->idCita,
+                    );
+                }
+                // Si se reactiva una cita, programar nuevas notificaciones
+                elseif (
+                    $estadoAnterior !== $cita->estado_Cita &&
+                    in_array($cita->estado_Cita, [
+                        "Pendiente",
+                        "Confirmada",
+                        "Sin pagar",
+                    ])
+                ) {
+                    $this->notificationService->programarNotificacionesPorCita(
+                        $cita->idCita,
+                    );
+                    Log::info(
+                        "Notificaciones reprogramadas para cita actualizada: " .
+                            $cita->idCita,
+                    );
+                }
+            } catch (\Exception $e) {
+                Log::error(
+                    "Error al manejar notificaciones para cita actualizada " .
+                        $cita->idCita .
+                        ": " .
+                        $e->getMessage(),
+                );
+            }
 
             return HttpResponseHelper::make()
                 ->successfulResponse("Cita actualizada correctamente")
@@ -1053,6 +1175,25 @@ class CitaController extends Controller
     {
         try {
             $cita = Cita::findOrFail($id);
+
+            // 🚀 Cancelar notificaciones antes de eliminar la cita
+            try {
+                $this->notificationService->cancelarNotificacionesCita(
+                    $cita->idCita,
+                );
+                Log::info(
+                    "Notificaciones canceladas para cita eliminada: " .
+                        $cita->idCita,
+                );
+            } catch (\Exception $e) {
+                Log::error(
+                    "Error al cancelar notificaciones para cita eliminada " .
+                        $cita->idCita .
+                        ": " .
+                        $e->getMessage(),
+                );
+            }
+
             $cita->delete();
 
             return HttpResponseHelper::make()
@@ -1094,48 +1235,42 @@ class CitaController extends Controller
     }
 
     //Consulta para las citas del psicologo (total por fechas)
-    public function getCitasPorPeriodoPsicologo()
-    {
-        $userId = Auth::id();
-        $psicologo = Psicologo::where("user_id", $userId)->first();
+   public function getCitasPorPeriodoPsicologo()
+{
+    $userId = Auth::id();
+    $psicologo = Psicologo::where("user_id", $userId)->first();
 
-        if (!$psicologo) {
-            return HttpResponseHelper::make()
-                ->notFoundResponse(
-                    "No se encontró un psicólogo asociado a este usuario.",
-                )
-                ->send();
-        }
-
+    // Mantener la misma lógica original para psicólogos
+    if ($psicologo) {
         $idPsicologo = $psicologo->idPsicologo;
-
         $citas = Cita::selectRaw("DATE(fecha_cita) as fecha, COUNT(*) as total")
             ->where("idPsicologo", $idPsicologo)
             ->groupBy("fecha_cita")
             ->orderBy("fecha_cita", "asc")
             ->get();
-
-        return response()->json($citas);
+    } else {
+        // Para ADMIN: misma consulta pero sin filtrar por psicólogo
+        $citas = Cita::selectRaw("DATE(fecha_cita) as fecha, COUNT(*) as total")
+            ->groupBy("fecha_cita")
+            ->orderBy("fecha_cita", "asc")
+            ->get();
     }
+
+    return response()->json($citas);
+}
 
     //Nueva consulta de dashboard del psicólogo
 
-    public function psicologoDashboard()
-    {
-        $userId = Auth::id();
-        $psicologo = Psicologo::where("user_id", $userId)->first();
+public function psicologoDashboard()
+{
+    $userId = Auth::id();
+    $psicologo = Psicologo::where("user_id", $userId)->first();
 
-        if (!$psicologo) {
-            return HttpResponseHelper::make()
-                ->notFoundResponse(
-                    "No se encontró un psicólogo asociado a este usuario.",
-                )
-                ->send();
-        }
-
+    // Mantener la misma lógica original para psicólogos
+    if ($psicologo) {
         $idPsicologo = $psicologo->idPsicologo;
 
-        // Obtener citas del psicólogo
+        // Obtener citas del psicólogo (lógica original)
         $totalCitas = Cita::where("idPsicologo", $idPsicologo)->count();
         $citasSinPagar = Cita::where("idPsicologo", $idPsicologo)
             ->where("estado_Cita", "Sin pagar")
@@ -1159,35 +1294,58 @@ class CitaController extends Controller
             ->whereIn("estado_Cita", ["Pendiente"])
             ->sum("duracion");
 
-        //Cambio en total de pacientes
+        // Total de pacientes (lógica original)
         $totalPacientes = Paciente::where("idPsicologo", $idPsicologo)
             ->whereNotNull("idPaciente")
             ->distinct("idPaciente")
             ->count("idPaciente");
 
-        //Cambio en nuevos pacientes
+        // Nuevos pacientes (lógica original)
         $nuevosPacientes = Cita::where("idPsicologo", $idPsicologo)
             ->where("estado_Cita", "Pendiente")
             ->whereNotNull("idPaciente")
             ->where("fecha_Cita", ">=", now()->subDays(7))
             ->orderBy("fecha_Cita", "asc")
             ->count();
+    } else {
+        // Para ADMIN: misma lógica pero sin filtrar por psicólogo
+        $totalCitas = Cita::count();
+        $citasSinPagar = Cita::where("estado_Cita", "Sin pagar")->count();
+        $citasRealizadas = Cita::where("estado_Cita", "Realizada")->count();
+        $citasPendientes = Cita::where("estado_Cita", "Pendiente")->count();
+        $citasCanceladas = Cita::where("estado_Cita", "Cancelada")->count();
+        $citasReprogramadas = Cita::where("estado_Cita", "Reprogramada")->count();
+        $citasAusentes = Cita::where("estado_Cita", "Ausente")->count();
+        $totalMinutosReservados = Cita::whereIn("estado_Cita", ["Pendiente"])->sum("duracion");
 
-        return HttpResponseHelper::make()
-            ->successfulResponse("Datos del dashboard cargados correctamente", [
-                "total_citas" => $totalCitas,
-                "citas_sin_pagar" => $citasSinPagar,
-                "citas_realizadas" => $citasRealizadas,
-                "citas_pendientes" => $citasPendientes,
-                "citas_ausentes" => $citasAusentes,
-                "citas_reprogramadas" => $citasReprogramadas,
-                "citas_canceladas" => $citasCanceladas,
-                "total_minutos_reservados" => $totalMinutosReservados,
-                "total_pacientes" => $totalPacientes,
-                "nuevos_pacientes" => $nuevosPacientes,
-            ])
-            ->send();
+        // Para ADMIN: total de todos los pacientes
+        $totalPacientes = Paciente::whereNotNull("idPaciente")
+            ->distinct("idPaciente")
+            ->count("idPaciente");
+
+        // Para ADMIN: nuevos pacientes de todos los psicólogos
+        $nuevosPacientes = Cita::where("estado_Cita", "Pendiente")
+            ->whereNotNull("idPaciente")
+            ->where("fecha_Cita", ">=", now()->subDays(7))
+            ->orderBy("fecha_Cita", "asc")
+            ->count();
     }
+
+    return HttpResponseHelper::make()
+        ->successfulResponse("Datos del dashboard cargados correctamente", [
+            "total_citas" => $totalCitas,
+            "citas_sin_pagar" => $citasSinPagar,
+            "citas_realizadas" => $citasRealizadas,
+            "citas_pendientes" => $citasPendientes,
+            "citas_ausentes" => $citasAusentes,
+            "citas_reprogramadas" => $citasReprogramadas,
+            "citas_canceladas" => $citasCanceladas,
+            "total_minutos_reservados" => $totalMinutosReservados,
+            "total_pacientes" => $totalPacientes,
+            "nuevos_pacientes" => $nuevosPacientes,
+        ])
+        ->send();
+}
 
     public function estadisticas()
     {
