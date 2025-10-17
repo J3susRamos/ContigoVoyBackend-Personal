@@ -127,7 +127,7 @@ class PsicologosController extends Controller
 
             if ($request->filled("search")) {
                 $search = $request->query("search");
-                $query->whereHas("user", function ($q) use ($search) {
+                $query->whereHas("users", function ($q) use ($search) {
                     $q->where("name", "like", "%{$search}%")
                         ->orWhere("apellido", "like", "%{$search}%");
                 });
@@ -211,11 +211,19 @@ class PsicologosController extends Controller
                 $generos = explode(",", $request->query("genero"));
                 $query->whereIn("genero", $generos);
             }
+//Agregado M.
+         if ($request->filled("idioma")) {
+    $idiomas = explode(",", $request->query("idioma"));
+    
+    $query->where(function($q) use ($idiomas) {
+        foreach ($idiomas as $idioma) {
+            // Buscar psicólogos que tengan el idioma en su lista (incluyendo múltiples idiomas)
+            $q->orWhere('idioma', 'LIKE', '%' . $idioma . '%');
+        }
+    });
+}
 
-            if ($request->filled("idioma")) {
-                $idiomas = explode(",", $request->query("idioma"));
-                $query->whereIn("idioma", $idiomas);
-            }
+//Fin Agregado M.
 
             if ($request->filled("enfoque")) {
                 $enfoques = explode(",", $request->query("enfoque"));
