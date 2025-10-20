@@ -178,6 +178,8 @@ Route::controller(PsicologosController::class)
                 Route::put("/estado/{id}", "cambiarEstadoPsicologo"); // Cambiar estado del psicólogo A = Activo, I = Inactivo
                 Route::get("/inactivo", "showInactivePsicologos"); // Nueva ruta para listar psicólogos inactivos
                 Route::get("/nombre", "listarNombre"); // listar nombre, apellido y idPsicologo de psicologos activos
+                // AGREGAR ESTA NUEVA RUTA PARA IDIOMAS agregado M.
+                Route::get("/idiomas/disponibles", "getIdiomasDisponibles");
             },
         );
         Route::put("/update/{id}", "actualizarPsicologo");

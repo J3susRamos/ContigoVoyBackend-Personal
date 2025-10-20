@@ -552,4 +552,48 @@ class PsicologosController extends Controller
             ], 500);
         }
     }
+
+     // AGREGAR ESTE MÉTODO NUEVO PARA OBTENER IDIOMAS DISPONIBLES M.
+    public function getIdiomasDisponibles(): JsonResponse
+    {
+        try {
+            // Obtener todos los idiomas únicos que usan los psicólogos
+            $idiomas = Psicologo::whereNotNull('idioma')
+                ->select('idioma')
+                ->distinct()
+                ->get()
+                ->pluck('idioma')
+                ->filter() // Remover valores nulos o vacíos
+                ->flatMap(function ($idiomaString) {
+                    // Separar idiomas por comas y limpiar espacios
+                    return array_map('trim', explode(',', $idiomaString));
+                })
+                ->unique()
+                ->values()
+                ->map(function ($codigoIdioma) {
+                    // Mapear códigos a nombres legibles
+                    $nombres = [
+                        'es' => 'Español',
+                        'en' => 'Inglés',
+                        'fr' => 'Francés',
+                        'de' => 'Alemán',
+                        'pt' => 'Portugués',
+                        'it' => 'Italiano',
+                    ];
+                    
+                    return [
+                        'codigo' => $codigoIdioma,
+                        'nombre' => $nombres[$codigoIdioma] ?? $codigoIdioma // Fallback al código si no está en el mapa
+                    ];
+                });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Idiomas obtenidos correctamente', $idiomas)
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
+                ->send();
+        }
+    }
 }

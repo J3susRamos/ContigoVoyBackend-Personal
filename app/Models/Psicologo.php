@@ -22,7 +22,8 @@ class Psicologo extends Model
         'pais',
         'genero',
         'experiencia',
-        'horario'
+        'horario',
+        'idioma' //agregado M.
     ];
 
     protected $casts = [
