@@ -93,80 +93,102 @@ class PsicologosController extends Controller
         }
     }
 
-    public function showAllPsicologos(Request $request): JsonResponse
-    {
-        try {
-            $shouldPaginate = $request->query("paginate", false);
-            $perPage = $request->query("per_page", 10);
+  public function showAllPsicologos(Request $request): JsonResponse
+{
+    try {
+        $shouldPaginate = $request->query("paginate", false);
+        $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function ($q) {
-                $q->where("estado", 1);
+        $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function ($q) {
+            $q->where("estado", 1);
+        });
+
+        if ($request->filled("pais")) {
+            $paises = explode(",", $request->query("pais"));
+            $query->whereIn("pais", $paises);
+        }
+
+        if ($request->filled("genero")) {
+            $generos = explode(",", $request->query("genero"));
+            $query->whereIn("genero", $generos);
+        }
+
+        if ($request->filled("idioma")) {
+            $idiomas = explode(",", $request->query("idioma"));
+            $query->whereIn("idioma", $idiomas);
+        }
+
+        if ($request->filled("enfoque")) {
+            $enfoques = explode(",", $request->query("enfoque"));
+            
+            // ✅ NUEVO: Mapeo de enfoques a títulos de psicólogos
+            $mapeoEnfoques = [
+                'niños' => 'Pediatra',
+                'adolescentes' => 'Pedagogo', 
+                'familiar' => 'Psicoanalista',
+                'pareja' => 'Terapeuta',
+                'adulto' => 'Conductual'
+            ];
+            
+            $titulosFiltro = [];
+            foreach ($enfoques as $enfoque) {
+                if (isset($mapeoEnfoques[$enfoque])) {
+                    $titulosFiltro[] = $mapeoEnfoques[$enfoque];
+                }
+            }
+            
+            // ✅ FILTRO ORIGINAL MANTENIDO (búsqueda en especialidades)
+            $query->whereHas("especialidades", function ($q) use ($enfoques) {
+                $q->whereIn("nombre", $enfoques);
+            });
+            
+            // ✅ NUEVO FILTRO AGREGADO (búsqueda en título del psicólogo)
+            if (!empty($titulosFiltro)) {
+                $query->orWhereIn("titulo", $titulosFiltro);
+            }
+        }
+
+        if ($request->filled("search")) {
+            $search = $request->query("search");
+            $query->whereHas("users", function ($q) use ($search) {
+                $q->where("name", "like", "%{$search}%")
+                    ->orWhere("apellido", "like", "%{$search}%");
+            });
+        }
+
+        if ($shouldPaginate) {
+            $paginator = $query->paginate($perPage);
+            $data = collect($paginator->items())->map(function ($psicologo) {
+                return $this->mapPsicologo($psicologo);
             });
 
-            if ($request->filled("pais")) {
-                $paises = explode(",", $request->query("pais"));
-                $query->whereIn("pais", $paises);
-            }
-
-            if ($request->filled("genero")) {
-                $generos = explode(",", $request->query("genero"));
-                $query->whereIn("genero", $generos);
-            }
-
-            if ($request->filled("idioma")) {
-                $idiomas = explode(",", $request->query("idioma"));
-                $query->whereIn("idioma", $idiomas);
-            }
-
-            if ($request->filled("enfoque")) {
-                $enfoques = explode(",", $request->query("enfoque"));
-                $query->whereHas("especialidades", function ($q) use ($enfoques) {
-                    $q->whereIn("nombre", $enfoques);
-                });
-            }
-
-            if ($request->filled("search")) {
-                $search = $request->query("search");
-                $query->whereHas("users", function ($q) use ($search) {
-                    $q->where("name", "like", "%{$search}%")
-                        ->orWhere("apellido", "like", "%{$search}%");
-                });
-            }
-
-            if ($shouldPaginate) {
-                $paginator = $query->paginate($perPage);
-                $data = collect($paginator->items())->map(function ($psicologo) {
-                    return $this->mapPsicologo($psicologo);
-                });
-
-                return HttpResponseHelper::make()
-                    ->successfulResponse("Psicólogos obtenidos correctamente", [
-                        "data" => $data,
-                        "pagination" => [
-                            "current_page" => $paginator->currentPage(),
-                            "last_page" => $paginator->lastPage(),
-                            "per_page" => $paginator->perPage(),
-                            "total" => $paginator->total(),
-                        ],
-                    ])
-                    ->send();
-            } else {
-                $psicologos = $query->get();
-                $data = $psicologos->map(function ($psicologo) {
-                    return $this->mapPsicologo($psicologo);
-                });
-
-                return HttpResponseHelper::make()
-                    ->successfulResponse("Psicólogos obtenidos correctamente", $data)
-                    ->send();
-            }
-        } catch (\Exception $e) {
             return HttpResponseHelper::make()
-                ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
+                ->successfulResponse("Psicólogos obtenidos correctamente", [
+                    "data" => $data,
+                    "pagination" => [
+                        "current_page" => $paginator->currentPage(),
+                        "last_page" => $paginator->lastPage(),
+                        "per_page" => $paginator->perPage(),
+                        "total" => $paginator->total(),
+                    ],
+                ])
+                ->send();
+        } else {
+            $psicologos = $query->get();
+            $data = $psicologos->map(function ($psicologo) {
+                return $this->mapPsicologo($psicologo);
+            });
+
+            return HttpResponseHelper::make()
+                ->successfulResponse("Psicólogos obtenidos correctamente", $data)
                 ->send();
         }
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
+            ->send();
     }
-
+}
     public function listarNombre(): JsonResponse
     {
         try {
