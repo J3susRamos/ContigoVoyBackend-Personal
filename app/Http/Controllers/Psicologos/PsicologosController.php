@@ -372,55 +372,81 @@ class PsicologosController extends Controller
         }
     }
 
-    //solo actualizar imagen, nombre, apellido y especialidades
-    public function actualizarPsicologo(Request $request, int $id): JsonResponse
-    {
-        try {
-            $psicologo = Psicologo::findOrFail($id);
-            $usuario = User::findOrFail($psicologo->user_id);
+    //solo actualiza ahora imagen, nombre, apellido,Introducción Profesional y especialidades
+  public function actualizarPsicologo(Request $request, int $id): JsonResponse
+{
+    try {
+        $psicologo = Psicologo::findOrFail($id);
+        $usuario = User::findOrFail($psicologo->user_id);
 
-            $usuarioData = [];
-            if ($request->filled('name')) {
-                $usuarioData['name'] = $request->input('name');
-            }
-            if ($request->filled('apellido')) {
-                $usuarioData['apellido'] = $request->input('apellido');
-            }
-            if ($request->filled('imagen')) {
-                $usuarioData['imagen'] = $request->input('imagen');
-            }
-            if (!empty($usuarioData)) {
-                $usuario->update($usuarioData);
-            }
-
-            if ($request->filled('especialidades')) {
-                $especialidadesNombres = $request->input('especialidades');
-                $especialidadesIds = [];
-                foreach ($especialidadesNombres as $nombre) {
-                    $nombre = trim($nombre);
-                    if (empty($nombre)) {
-                        continue;
-                    }
-                    $especialidad = Especialidad::firstOrCreate(['nombre' => $nombre]);
-                    if (!$especialidad->idEspecialidad) {
-                        throw new \Exception("No se pudo crear o encontrar la especialidad: $nombre");
-                    }
-                    $especialidadesIds[] = $especialidad->idEspecialidad;
-                }
-                if (!empty($especialidadesIds)) {
-                    $psicologo->especialidades()->sync($especialidadesIds);
-                }
-            }
-
-            return HttpResponseHelper::make()
-                ->successfulResponse('Psicólogo actualizado correctamente')
-                ->send();
-        } catch (\Exception $e) {
-            return HttpResponseHelper::make()
-                ->internalErrorResponse('Ocurrió un problema: ' . $e->getMessage())
-                ->send();
+        // Actualizar datos del usuario
+        $usuarioData = [];
+        if ($request->filled('nombre')) {
+            $usuarioData['name'] = $request->input('nombre');
         }
+        if ($request->filled('apellido')) {
+            $usuarioData['apellido'] = $request->input('apellido');
+        }
+        if ($request->filled('imagen')) {
+            $usuarioData['imagen'] = $request->input('imagen');
+        }
+        if ($request->filled('fecha_nacimiento')) {
+            $usuarioData['fecha_nacimiento'] = $request->input('fecha_nacimiento');
+        }
+        if (!empty($usuarioData)) {
+            $usuario->update($usuarioData);
+        }
+
+        // Actualizar datos del psicólogo (AGREGAR ESTA PARTE)
+        $psicologoData = [];
+        if ($request->filled('titulo')) {
+            $psicologoData['titulo'] = $request->input('titulo');
+        }
+        if ($request->filled('introduccion')) {
+            $psicologoData['introduccion'] = $request->input('introduccion');
+        }
+        if ($request->filled('pais')) {
+            $psicologoData['pais'] = $request->input('pais');
+        }
+        if ($request->filled('genero')) {
+            $psicologoData['genero'] = $request->input('genero');
+        }
+        if ($request->filled('experiencia')) {
+            $psicologoData['experiencia'] = $request->input('experiencia');
+        }
+        if (!empty($psicologoData)) {
+            $psicologo->update($psicologoData);
+        }
+
+        // Resto del código para especialidades...
+        if ($request->filled('especialidades')) {
+            $especialidadesNombres = $request->input('especialidades');
+            $especialidadesIds = [];
+            foreach ($especialidadesNombres as $nombre) {
+                $nombre = trim($nombre);
+                if (empty($nombre)) {
+                    continue;
+                }
+                $especialidad = Especialidad::firstOrCreate(['nombre' => $nombre]);
+                if (!$especialidad->idEspecialidad) {
+                    throw new \Exception("No se pudo crear o encontrar la especialidad: $nombre");
+                }
+                $especialidadesIds[] = $especialidad->idEspecialidad;
+            }
+            if (!empty($especialidadesIds)) {
+                $psicologo->especialidades()->sync($especialidadesIds);
+            }
+        }
+
+        return HttpResponseHelper::make()
+            ->successfulResponse('Psicólogo actualizado correctamente')
+            ->send();
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse('Ocurrió un problema: ' . $e->getMessage())
+            ->send();
     }
+}
 
     //Obtener las especialidades de un psicologo
     public function obtenerEspecialidades(int $id): JsonResponse
