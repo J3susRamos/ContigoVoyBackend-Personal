@@ -17,16 +17,10 @@ class WhatsAppService
 
     public function __construct()
     {
-        $this->baseUrl = config(
-            "services.whatsapp_service.base_url",
-            "http://localhost:5111",
-        );
         $this->timeout = config("services.whatsapp_service.timeout", 30);
-        $this->username = config("services.whatsapp_service.username", "admin");
-        $this->password = config(
-            "services.whatsapp_service.password",
-            "admin123",
-        );
+        $this->baseUrl = env('WHATSAPP_SERVICE_URL');
+        $this->username = env('WHATSAPP_SERVICE_USERNAME');
+        $this->password = env('WHATSAPP_SERVICE_PASSWORD');
 
         // El token se obtendrá dinámicamente mediante login
         $this->token = null;
