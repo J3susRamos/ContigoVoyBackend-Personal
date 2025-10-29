@@ -147,7 +147,13 @@ class PsicologosController extends Controller
                 $query->orWhereIn("titulo", $titulosFiltro);
             }
         }
-
+        //agregado especialidad M.
+if ($request->filled("especialidad")) {
+    $especialidades = explode(",", $request->query("especialidad"));
+    $query->whereHas("especialidades", function ($q) use ($especialidades) {
+        $q->whereIn("nombre", $especialidades);
+    });
+}
         if ($request->filled("search")) {
             $search = $request->query("search");
             $query->whereHas("users", function ($q) use ($search) {
