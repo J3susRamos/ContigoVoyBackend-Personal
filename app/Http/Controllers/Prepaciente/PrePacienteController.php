@@ -14,6 +14,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\EnviarNotificacionesPrePaciente;
+use App\Jobs\EnviarRecordatorioCita;
+use Carbon\Carbon;
+
 
 class PrePacienteController extends Controller
 {
@@ -25,7 +28,7 @@ class PrePacienteController extends Controller
                 "celular" => "required|string|min:3|max:30",
                 "correo" =>
                     "required|email|max:150",
-                "idPsicologo" => "required|exists:psicologos,idPsicologo",
+                 "idPsicologo" => "required|exists:psicologos,idPsicologo",
             ]);
 
             $prePaciente = PrePaciente::create($prePacienteValidated);
@@ -44,7 +47,13 @@ class PrePacienteController extends Controller
                 "idPrePaciente" => $id,
             ]);
 
-            Cita::create($citaData);
+            $cita =Cita::create($citaData);
+
+            $horaRecordatorio = Carbon::parse($cita->fecha_cita . ' ' . $cita->hora_cita)
+                                ->subHours(3);
+
+
+            EnviarRecordatorioCita::dispatch($cita)->delay($horaRecordatorio);
 
             // Cargamos la relación con el psicólogo
             $prePaciente = PrePaciente::with("psicologo.users")->find($id);
@@ -176,4 +185,6 @@ class PrePacienteController extends Controller
                 ->send();
         }
     }
+
+
 }
