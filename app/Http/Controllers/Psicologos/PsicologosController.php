@@ -378,8 +378,8 @@ if ($request->filled("especialidad")) {
         }
     }
 
-    //solo actualiza ahora imagen, nombre, apellido,Introducción Profesional y especialidades
-  public function actualizarPsicologo(Request $request, int $id): JsonResponse
+//solo actualiza ahora imagen, nombre, apellido,Introducción Profesional, idioma y especialidades  M.
+public function actualizarPsicologo(Request $request, int $id): JsonResponse
 {
     try {
         $psicologo = Psicologo::findOrFail($id);
@@ -420,6 +420,12 @@ if ($request->filled("especialidad")) {
         if ($request->filled('experiencia')) {
             $psicologoData['experiencia'] = $request->input('experiencia');
         }
+        // --- AGREGADO: CAMPO IDIOMA ---
+        if ($request->filled('idioma')) {
+            $psicologoData['idioma'] = $request->input('idioma');
+        }
+        // --- FIN AGREGADO ---
+        
         if (!empty($psicologoData)) {
             $psicologo->update($psicologoData);
         }
