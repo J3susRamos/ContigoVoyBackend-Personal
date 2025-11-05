@@ -1,0 +1,20 @@
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('psicologos', function (Blueprint $table) {
+            // CSV permitido: "es,en,pt"
+            $table->string('idioma', 120)->nullable()->after('experiencia');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('psicologos', function (Blueprint $table) {
+            $table->dropColumn('idioma');
+        });
+    }
+};

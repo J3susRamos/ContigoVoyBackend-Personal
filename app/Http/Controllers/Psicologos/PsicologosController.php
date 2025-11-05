@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 
+
 class PsicologosController extends Controller
 {
 
@@ -649,10 +650,82 @@ public function actualizarPsicologo(Request $request, int $id): JsonResponse
             ->successfulResponse('Idiomas obtenidos correctamente', $idiomas)
             ->send();
 
-    } catch (\Exception $e) {
+        } catch (\Exception $e) {
         return HttpResponseHelper::make()
             ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
             ->send();
     }
     }
+
+    // Devuelve opciones dinámicas de filtros basadas en los psicólogos activos y especialidades
+    public function getFilterOptions(): JsonResponse
+    {
+        try {
+            // Base: psicólogos con usuario activo
+            $baseQuery = Psicologo::whereHas('users', function ($q) {
+                $q->where('estado', 1);
+            });
+
+            // Paises
+            $paises = $baseQuery->get()->pluck('pais')->filter()->unique()->values();
+
+            // Generos
+            $generos = $baseQuery->get()->pluck('genero')->filter()->unique()->values();
+
+            // Idiomas (se permiten campos CSV)
+            $idiomas = Psicologo::whereNotNull('idioma')
+                ->whereHas('users', function ($q) {
+                    $q->where('estado', 1);
+                })
+                ->select('idioma')
+                ->distinct()
+                ->get()
+                ->pluck('idioma')
+                ->filter()
+                ->flatMap(fn($i) => array_map('trim', explode(',', $i)))
+                ->unique()
+                ->values();
+
+            // Especialidades
+            $especialidades = Especialidad::all()->pluck('nombre')->filter()->unique()->values();
+
+            // Map de enfoques conocido en el controlador (coincide con el filtrado de showAllPsicologos)
+            $mapeoEnfoques = [
+                'niños' => 'Pediatra',
+                'adolescentes' => 'Pedagogo',
+                'familiar' => 'Psicoanalista',
+                'pareja' => 'Terapeuta',
+                'adulto' => 'Conductual'
+            ];
+
+            $enfoques = [];
+            foreach ($mapeoEnfoques as $clave => $titulo) {
+                $existeTitulo = Psicologo::where('titulo', $titulo)
+                    ->whereHas('users', fn($q) => $q->where('estado', 1))
+                    ->exists();
+                $existeEspecialidad = Especialidad::where('nombre', $clave)->exists();
+                if ($existeTitulo || $existeEspecialidad) {
+                    $enfoques[] = $clave;
+                }
+            }
+
+            $result = [
+                'paises' => $paises->values(),
+                'generos' => $generos->values(),
+                'idiomas' => $idiomas->values(),
+                'enfoques' => array_values(array_unique($enfoques)),
+                'especialidades' => $especialidades->values(),
+            ];
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Opciones de filtros obtenidas correctamente', $result)
+                ->send();
+
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Error al obtener opciones de filtros: ' . $e->getMessage())
+                ->send();
+        }
+    }
+
 }

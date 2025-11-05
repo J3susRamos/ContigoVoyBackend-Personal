@@ -184,7 +184,9 @@ Route::controller(PsicologosController::class)
         );
         
         Route::put("/update/{id}", "actualizarPsicologo");
-        Route::get("/especialidades/{id}", "obtenerEspecialidades");
+    Route::get("/especialidades/{id}", "obtenerEspecialidades");
+    // Opciones dinámicas de filtros para el front-end
+    Route::get("/filters", "getFilterOptions");
         Route::get("/", "showAllPsicologos"); // listar psicologos activos
         Route::get("/{id}", "showById");
     });
