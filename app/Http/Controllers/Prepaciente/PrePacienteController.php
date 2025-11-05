@@ -28,7 +28,7 @@ class PrePacienteController extends Controller
                 "celular" => "required|string|min:3|max:30",
                 "correo" =>
                     "required|email|max:150",
-                 "idPsicologo" => "required|exists:users,user_id",
+                 "idPsicologo" => "required|exists:psicologos,idPsicologo",
             ]);
 
             $prePaciente = PrePaciente::create($prePacienteValidated);
