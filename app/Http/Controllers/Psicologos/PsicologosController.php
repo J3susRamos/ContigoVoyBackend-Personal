@@ -147,7 +147,13 @@ class PsicologosController extends Controller
                 $query->orWhereIn("titulo", $titulosFiltro);
             }
         }
-
+        //agregado especialidad M.
+if ($request->filled("especialidad")) {
+    $especialidades = explode(",", $request->query("especialidad"));
+    $query->whereHas("especialidades", function ($q) use ($especialidades) {
+        $q->whereIn("nombre", $especialidades);
+    });
+}
         if ($request->filled("search")) {
             $search = $request->query("search");
             $query->whereHas("users", function ($q) use ($search) {
@@ -372,8 +378,8 @@ class PsicologosController extends Controller
         }
     }
 
-    //solo actualiza ahora imagen, nombre, apellido,Introducción Profesional y especialidades
-  public function actualizarPsicologo(Request $request, int $id): JsonResponse
+//solo actualiza ahora imagen, nombre, apellido,Introducción Profesional, idioma y especialidades  M.
+public function actualizarPsicologo(Request $request, int $id): JsonResponse
 {
     try {
         $psicologo = Psicologo::findOrFail($id);
@@ -414,6 +420,12 @@ class PsicologosController extends Controller
         if ($request->filled('experiencia')) {
             $psicologoData['experiencia'] = $request->input('experiencia');
         }
+        // --- AGREGADO: CAMPO IDIOMA ---
+        if ($request->filled('idioma')) {
+            $psicologoData['idioma'] = $request->input('idioma');
+        }
+        // --- FIN AGREGADO ---
+        
         if (!empty($psicologoData)) {
             $psicologo->update($psicologoData);
         }
@@ -603,45 +615,44 @@ class PsicologosController extends Controller
 
      // AGREGAR ESTE MÉTODO NUEVO PARA OBTENER IDIOMAS DISPONIBLES M.
     public function getIdiomasDisponibles(): JsonResponse
-    {
-        try {
-            // Obtener todos los idiomas únicos que usan los psicólogos
-            $idiomas = Psicologo::whereNotNull('idioma')
-                ->select('idioma')
-                ->distinct()
-                ->get()
-                ->pluck('idioma')
-                ->filter() // Remover valores nulos o vacíos
-                ->flatMap(function ($idiomaString) {
-                    // Separar idiomas por comas y limpiar espacios
-                    return array_map('trim', explode(',', $idiomaString));
-                })
-                ->unique()
-                ->values()
-                ->map(function ($codigoIdioma) {
-                    // Mapear códigos a nombres legibles
-                    $nombres = [
-                        'es' => 'Español',
-                        'en' => 'Inglés',
-                        'fr' => 'Francés',
-                        'de' => 'Alemán',
-                        'pt' => 'Portugués',
-                        'it' => 'Italiano',
-                    ];
-                    
-                    return [
-                        'codigo' => $codigoIdioma,
-                        'nombre' => $nombres[$codigoIdioma] ?? $codigoIdioma // Fallback al código si no está en el mapa
-                    ];
-                });
+{
+    try {
+        // Obtener todos los idiomas únicos que usan los psicólogos
+        $idiomas = Psicologo::whereNotNull('idioma')
+            ->select('idioma')
+            ->distinct()
+            ->get()
+            ->pluck('idioma')
+            ->filter()
+            ->flatMap(fn($i) => array_map('trim', explode(',', $i)))
+            ->unique()
+            ->values();
 
-            return HttpResponseHelper::make()
-                ->successfulResponse('Idiomas obtenidos correctamente', $idiomas)
-                ->send();
-        } catch (\Exception $e) {
-            return HttpResponseHelper::make()
-                ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
-                ->send();
+        if ($idiomas->isEmpty()) {
+            $idiomas = collect(['es', 'en', 'fr', 'de', 'pt', 'it']);
         }
+
+        $idiomas = $idiomas->map(fn($codigo) => [
+            'codigo' => $codigo,
+            'nombre' => [
+                'es' => 'Español',
+                'en' => 'Inglés',
+                'fr' => 'Francés',
+                'de' => 'Alemán',
+                'pt' => 'Portugués',
+                'it' => 'Italiano',
+            ][$codigo] ?? $codigo,
+        ]);
+
+        // 👇 Aquí el return que faltaba
+        return HttpResponseHelper::make()
+            ->successfulResponse('Idiomas obtenidos correctamente', $idiomas)
+            ->send();
+
+    } catch (\Exception $e) {
+        return HttpResponseHelper::make()
+            ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
+            ->send();
+    }
     }
 }

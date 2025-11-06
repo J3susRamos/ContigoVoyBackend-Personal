@@ -167,7 +167,7 @@ Route::controller(PsicologosController::class)
             [
                 "middleware" => [
                     "auth:sanctum",
-                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION",
+                    "role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION|PSICOLOGO",
                 ],
             ],
             function () {
@@ -182,6 +182,7 @@ Route::controller(PsicologosController::class)
                 Route::get("/idiomas/disponibles", "getIdiomasDisponibles");
             },
         );
+        
         Route::put("/update/{id}", "actualizarPsicologo");
         Route::get("/especialidades/{id}", "obtenerEspecialidades");
         Route::get("/", "showAllPsicologos"); // listar psicologos activos
