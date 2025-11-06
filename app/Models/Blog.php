@@ -128,4 +128,14 @@ class Blog extends Model
     {
         return $this->hasMany(Comentario::class, 'idBlog', 'id');
     }
+
+      public function meta(): HasOne
+    {
+        return $this->hasOne(BlogMetadata::class, 'blog_id', 'idBlog');
+    }
+
+    public function imagenes(): HasMany
+    {
+        return $this->hasMany(BlogImages::class, 'blog_id', 'idBlog');
+    }
 }

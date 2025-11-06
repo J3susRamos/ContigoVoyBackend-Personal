@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Blog;
 
+
 use App\Http\Controllers\Controller;
 use App\Models\Blog;
+use App\Models\BlogMetadata;
+use App\Models\BlogImages;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\PostBlogs\PostBlogs;
 use App\Models\Psicologo;
@@ -11,10 +14,14 @@ use Illuminate\Support\Str;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Http\JsonResponse;
 
+
+
+
 class BlogController extends Controller
 {
     public function createBlog(PostBlogs $request): JsonResponse
     {
+        \Log::info('Datos recibidos:', $request->all());
         try {
             $userId = Auth::id();
             $psicologo = Psicologo::where('user_id', $userId)->first();
@@ -29,7 +36,29 @@ class BlogController extends Controller
             $data['idPsicologo'] = $psicologo->idPsicologo;
             $data['fecha_publicado'] = now();
 
-            Blog::create($data);
+            $blog = Blog::create($data);
+
+            // ✅ Guardar metadata si viene en el request
+            if ($request->has(['meta_title', 'meta_description', 'keywords'])) {
+                BlogMetadata::create([
+                    'blog_id' => $blog->idBlog,
+                    'metaTitle' => $request->input('meta_title'),
+                    'metaDescription' => $request->input('meta_description'),
+                    'keywords' => $request->input('keywords'),
+                ]);
+            }
+
+            // ✅ Guardar las imágenes asociadas (si hay)
+            if ($request->has('images')) {
+                foreach ($request->images as $image) {
+                    BlogImages::create([
+                        'blog_id' => $blog->idBlog,
+                        'src' => $image['src'],
+                        'title' => $image['title'] ?? null,
+                        'alt' => $image['alt'] ?? null,
+                    ]);
+                }
+            }
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog creado correctamente')
@@ -40,6 +69,7 @@ class BlogController extends Controller
                 ->send();
         }
     }
+
 
     public function showAllBlogs(): JsonResponse
     {
