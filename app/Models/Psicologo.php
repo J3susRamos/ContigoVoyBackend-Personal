@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+
 class Psicologo extends Model
 {
     use HasFactory;
@@ -23,7 +24,7 @@ class Psicologo extends Model
         'genero',
         'experiencia',
         'horario',
-        'idioma' //agregado M.
+       
     ];
 
     protected $casts = [
@@ -50,4 +51,10 @@ class Psicologo extends Model
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
+
+    public function idiomas(): BelongsToMany
+    {
+        return $this->belongsToMany(Idioma::class, 'idioma_detalle', 'idPsicologo', 'idIdioma');
+    }
+    
 }
