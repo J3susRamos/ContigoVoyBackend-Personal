@@ -26,12 +26,16 @@ class IdiomaController extends Controller
     public function store(Request $request): JsonResponse {
         $request->validate(['nombre' => 'required|string|max:100']);
         $nombre = $this->norm($request->input('nombre'));
-
+        // Evita duplicados por colación y normalización
         $idioma = Idioma::firstOrCreate(['nombre' => $nombre]);
         return HttpResponseHelper::make()
-            ->successfulResponse('Idioma creado correctamente', $idioma)
-            ->send();
-    }
+         ->successfulResponse(
+            'Idioma creado correctamente',
+            $idioma->only(['idIdioma','nombre'])
+        )
+        ->send();
+}
+
 
     public function update(Request $request, int $id): JsonResponse {
         $idioma = Idioma::findOrFail($id);

@@ -60,7 +60,7 @@ class PsicologosController extends Controller
                 $psicologo->especialidades()->attach($requestPsicologo->input('especialidades'));
             }
 
-            // Asociar idiomas (si llegan como array de strings)
+           // createPsicologo
             if ($requestPsicologo->filled('idiomas') && is_array($requestPsicologo->input('idiomas'))) {
                 $ids = [];
                 foreach ($requestPsicologo->input('idiomas') as $val) {
@@ -69,7 +69,7 @@ class PsicologosController extends Controller
                     $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
                     $ids[] = $idioma->idIdioma;
                 }
-                if (!empty($ids)) {
+                    if (!empty($ids)) {
                     $psicologo->idiomas()->sync($ids);
                 }
             }
