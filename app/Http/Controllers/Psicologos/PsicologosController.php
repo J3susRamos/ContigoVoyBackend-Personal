@@ -11,6 +11,7 @@ use App\Models\Cita;
 use App\Models\Especialidad;
 use App\Models\Psicologo;
 use App\Models\User;
+use App\Models\Idioma;
 use Illuminate\Support\Facades\Hash;
 use App\Traits\HttpResponseHelper;
 use Carbon\Carbon;
@@ -19,9 +20,19 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-
 class PsicologosController extends Controller
 {
+    /**
+     * Normaliza nombres (trim, lower → Title) para evitar duplicados tipo "ingles", "Ingles", "inglés".
+     */
+    private function normalizeName(?string $s): ?string
+    {
+        if ($s === null) return null;
+        $s = trim($s);
+        if ($s === '') return null;
+        $s = mb_strtolower($s, 'UTF-8');
+        return mb_convert_case($s, MB_CASE_TITLE, 'UTF-8');
+    }
 
     public function createPsicologo(PostPsicologo $requestPsicologo, PostUser $requestUser): JsonResponse
     {
@@ -35,13 +46,33 @@ class PsicologosController extends Controller
             $usuario = User::create($usuarioData);
             $usuario_id = $usuario->user_id;
 
-            // Asignar el user_id recién creado al psicólogo
+            // Crear psicólogo
             $psicologoData = $requestPsicologo->all();
             $psicologoData['user_id'] = $usuario_id;
+
+            // No guardamos 'idioma' como string: ahora usamos relación N:M
+            unset($psicologoData['idioma']);
+
             $psicologo = Psicologo::create($psicologoData);
 
-            // Asociar las especialidades y enfoques al psicólogo
-            $psicologo->especialidades()->attach($requestPsicologo->input('especialidades'));
+            // Asociar especialidades (si llegan)
+            if ($requestPsicologo->filled('especialidades')) {
+                $psicologo->especialidades()->attach($requestPsicologo->input('especialidades'));
+            }
+
+            // Asociar idiomas (si llegan como array de strings)
+            if ($requestPsicologo->filled('idiomas') && is_array($requestPsicologo->input('idiomas'))) {
+                $ids = [];
+                foreach ($requestPsicologo->input('idiomas') as $val) {
+                    $nom = $this->normalizeName($val);
+                    if (!$nom) continue;
+                    $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
+                    $ids[] = $idioma->idIdioma;
+                }
+                if (!empty($ids)) {
+                    $psicologo->idiomas()->sync($ids);
+                }
+            }
 
             $usuario->assignRole('PSICOLOGO');
 
@@ -58,7 +89,7 @@ class PsicologosController extends Controller
     public function showById(int $id): JsonResponse
     {
         try {
-            $psicologo = Psicologo::with(['especialidades', 'users'])->find($id);
+            $psicologo = Psicologo::with(['especialidades', 'idiomas', 'users'])->find($id);
 
             if (!$psicologo) {
                 return HttpResponseHelper::make()
@@ -67,7 +98,6 @@ class PsicologosController extends Controller
             }
 
             $response = [
-                // se modifico 'Titulo' a 'titulo'
                 'idPsicologo' => $psicologo->idPsicologo,
                 'titulo' => $psicologo->titulo,
                 'nombre' => $psicologo->users->name,
@@ -77,8 +107,9 @@ class PsicologosController extends Controller
                 'correo' => $psicologo->users->email,
                 'contraseña' => $psicologo->users->password,
                 'imagen' => $psicologo->users->imagen,
-                'fecha_nacimiento' => $psicologo->users->fecha_nacimiento->format('d/m/Y'),
+                'fecha_nacimiento' => $psicologo->users->fecha_nacimiento?->format('d/m/Y'),
                 'especialidades' => $psicologo->especialidades->pluck('nombre'),
+                'idiomas' => $psicologo->idiomas->pluck('nombre'),
                 'introduccion' => $psicologo->introduccion,
                 'experiencia' => $psicologo->experiencia,
             ];
@@ -93,108 +124,119 @@ class PsicologosController extends Controller
         }
     }
 
-  public function showAllPsicologos(Request $request): JsonResponse
-{
-    try {
-        $shouldPaginate = $request->query("paginate", false);
-        $perPage = $request->query("per_page", 10);
+    public function showAllPsicologos(Request $request): JsonResponse
+    {
+        try {
+            $shouldPaginate = $request->query("paginate", false);
+            $perPage = $request->query("per_page", 10);
 
-        $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function ($q) {
-            $q->where("estado", 1);
-        });
+            $query = Psicologo::with(['especialidades', 'idiomas', 'users'])
+                ->whereHas('users', function ($q) {
+                    $q->where("estado", 1);
+                });
 
-        if ($request->filled("pais")) {
-            $paises = explode(",", $request->query("pais"));
-            $query->whereIn("pais", $paises);
-        }
+            if ($request->filled("pais")) {
+                $paises = array_map('trim', explode(",", $request->query("pais")));
+                $query->whereIn("pais", $paises);
+            }
 
-        if ($request->filled("genero")) {
-            $generos = explode(",", $request->query("genero"));
-            $query->whereIn("genero", $generos);
-        }
+            if ($request->filled("genero")) {
+                $generos = array_map('trim', explode(",", $request->query("genero")));
+                $query->whereIn("genero", $generos);
+            }
 
-        if ($request->filled("idioma")) {
-            $idiomas = explode(",", $request->query("idioma"));
-            $query->whereIn("idioma", $idiomas);
-        }
-
-        if ($request->filled("enfoque")) {
-            $enfoques = explode(",", $request->query("enfoque"));
-            
-            // ✅ NUEVO: Mapeo de enfoques a títulos de psicólogos
-            $mapeoEnfoques = [
-                'niños' => 'Pediatra',
-                'adolescentes' => 'Pedagogo', 
-                'familiar' => 'Psicoanalista',
-                'pareja' => 'Terapeuta',
-                'adulto' => 'Conductual'
-            ];
-            
-            $titulosFiltro = [];
-            foreach ($enfoques as $enfoque) {
-                if (isset($mapeoEnfoques[$enfoque])) {
-                    $titulosFiltro[] = $mapeoEnfoques[$enfoque];
+            // Idiomas por relación N:M (nombres)
+            if ($request->filled("idioma")) {
+                $idiomas = array_map(fn($v) => $this->normalizeName($v), explode(",", $request->query("idioma")));
+                $idiomas = array_values(array_filter($idiomas));
+                if (!empty($idiomas)) {
+                    $query->whereHas('idiomas', function ($q) use ($idiomas) {
+                        $q->whereIn('nombre', $idiomas);
+                    });
                 }
             }
-            
-            // ✅ FILTRO ORIGINAL MANTENIDO (búsqueda en especialidades)
-            $query->whereHas("especialidades", function ($q) use ($enfoques) {
-                $q->whereIn("nombre", $enfoques);
-            });
-            
-            // ✅ NUEVO FILTRO AGREGADO (búsqueda en título del psicólogo)
-            if (!empty($titulosFiltro)) {
-                $query->orWhereIn("titulo", $titulosFiltro);
+
+            // Enfoque (mapeo a titulo ó por especialidad)
+            if ($request->filled("enfoque")) {
+                $enfoques = array_map('trim', explode(",", $request->query("enfoque")));
+
+                $mapeoEnfoques = [
+                    'niños' => 'Pediatra',
+                    'adolescentes' => 'Pedagogo',
+                    'familiar' => 'Psicoanalista',
+                    'pareja' => 'Terapeuta',
+                    'adulto' => 'Conductual'
+                ];
+
+                $titulosFiltro = [];
+                foreach ($enfoques as $enfoque) {
+                    if (isset($mapeoEnfoques[$enfoque])) {
+                        $titulosFiltro[] = $mapeoEnfoques[$enfoque];
+                    }
+                }
+
+                // Agrupar para no romper otros filtros
+                $query->where(function ($q) use ($enfoques, $titulosFiltro) {
+                    $q->whereHas("especialidades", function ($qq) use ($enfoques) {
+                        $qq->whereIn("nombre", $enfoques);
+                    });
+                    if (!empty($titulosFiltro)) {
+                        $q->orWhereIn("titulo", $titulosFiltro);
+                    }
+                });
             }
-        }
-        //agregado especialidad M.
-if ($request->filled("especialidad")) {
-    $especialidades = explode(",", $request->query("especialidad"));
-    $query->whereHas("especialidades", function ($q) use ($especialidades) {
-        $q->whereIn("nombre", $especialidades);
-    });
-}
-        if ($request->filled("search")) {
-            $search = $request->query("search");
-            $query->whereHas("users", function ($q) use ($search) {
-                $q->where("name", "like", "%{$search}%")
-                    ->orWhere("apellido", "like", "%{$search}%");
-            });
-        }
 
-        if ($shouldPaginate) {
-            $paginator = $query->paginate($perPage);
-            $data = collect($paginator->items())->map(function ($psicologo) {
-                return $this->mapPsicologo($psicologo);
-            });
+            // Especialidad explícita
+            if ($request->filled("especialidad")) {
+                $especialidades = array_map('trim', explode(",", $request->query("especialidad")));
+                $query->whereHas("especialidades", function ($q) use ($especialidades) {
+                    $q->whereIn("nombre", $especialidades);
+                });
+            }
 
+            // Búsqueda por nombre y apellido del usuario
+            if ($request->filled("search")) {
+                $search = $request->query("search");
+                $query->whereHas("users", function ($q) use ($search) {
+                    $q->where("name", "like", "%{$search}%")
+                      ->orWhere("apellido", "like", "%{$search}%");
+                });
+            }
+
+            if ($shouldPaginate) {
+                $paginator = $query->paginate($perPage);
+                $data = collect($paginator->items())->map(function ($psicologo) {
+                    return $this->mapPsicologo($psicologo);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Psicólogos obtenidos correctamente", [
+                        "data" => $data,
+                        "pagination" => [
+                            "current_page" => $paginator->currentPage(),
+                            "last_page" => $paginator->lastPage(),
+                            "per_page" => $paginator->perPage(),
+                            "total" => $paginator->total(),
+                        ],
+                    ])
+                    ->send();
+            } else {
+                $psicologos = $query->get();
+                $data = $psicologos->map(function ($psicologo) {
+                    return $this->mapPsicologo($psicologo);
+                });
+
+                return HttpResponseHelper::make()
+                    ->successfulResponse("Psicólogos obtenidos correctamente", $data)
+                    ->send();
+            }
+        } catch (\Exception $e) {
             return HttpResponseHelper::make()
-                ->successfulResponse("Psicólogos obtenidos correctamente", [
-                    "data" => $data,
-                    "pagination" => [
-                        "current_page" => $paginator->currentPage(),
-                        "last_page" => $paginator->lastPage(),
-                        "per_page" => $paginator->perPage(),
-                        "total" => $paginator->total(),
-                    ],
-                ])
-                ->send();
-        } else {
-            $psicologos = $query->get();
-            $data = $psicologos->map(function ($psicologo) {
-                return $this->mapPsicologo($psicologo);
-            });
-
-            return HttpResponseHelper::make()
-                ->successfulResponse("Psicólogos obtenidos correctamente", $data)
+                ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
                 ->send();
         }
-    } catch (\Exception $e) {
-        return HttpResponseHelper::make()
-            ->internalErrorResponse("Error al obtener psicólogos: " . $e->getMessage())
-            ->send();
     }
-}
+
     public function listarNombre(): JsonResponse
     {
         try {
@@ -226,37 +268,43 @@ if ($request->filled("especialidad")) {
             $shouldPaginate = $request->query("paginate", false);
             $perPage = $request->query("per_page", 10);
 
-            $query = Psicologo::with(['especialidades', 'users'])->whereHas('users', function ($q) {
-                $q->where("estado", 0);
-            });
+            $query = Psicologo::with(['especialidades', 'idiomas', 'users'])
+                ->whereHas('users', function ($q) {
+                    $q->where("estado", 0);
+                });
 
             if ($request->filled("pais")) {
-                $paises = explode(",", $request->query("pais"));
+                $paises = array_map('trim', explode(",", $request->query("pais")));
                 $query->whereIn("pais", $paises);
             }
 
             if ($request->filled("genero")) {
-                $generos = explode(",", $request->query("genero"));
+                $generos = array_map('trim', explode(",", $request->query("genero")));
                 $query->whereIn("genero", $generos);
             }
-//Agregado M.
-         if ($request->filled("idioma")) {
-    $idiomas = explode(",", $request->query("idioma"));
-    
-    $query->where(function($q) use ($idiomas) {
-        foreach ($idiomas as $idioma) {
-            // Buscar psicólogos que tengan el idioma en su lista (incluyendo múltiples idiomas)
-            $q->orWhere('idioma', 'LIKE', '%' . $idioma . '%');
-        }
-    });
-}
 
-//Fin Agregado M.
+            // Idiomas N:M por nombre
+            if ($request->filled("idioma")) {
+                $idiomas = array_map(fn($v) => $this->normalizeName($v), explode(",", $request->query("idioma")));
+                $idiomas = array_values(array_filter($idiomas));
+                if (!empty($idiomas)) {
+                    $query->whereHas('idiomas', function ($q) use ($idiomas) {
+                        $q->whereIn('nombre', $idiomas);
+                    });
+                }
+            }
 
             if ($request->filled("enfoque")) {
-                $enfoques = explode(",", $request->query("enfoque"));
+                $enfoques = array_map('trim', explode(",", $request->query("enfoque")));
                 $query->whereHas("especialidades", function ($q) use ($enfoques) {
                     $q->whereIn("nombre", $enfoques);
+                });
+            }
+
+            if ($request->filled("especialidad")) {
+                $especialidades = array_map('trim', explode(",", $request->query("especialidad")));
+                $query->whereHas("especialidades", function ($q) use ($especialidades) {
+                    $q->whereIn("nombre", $especialidades);
                 });
             }
 
@@ -314,6 +362,7 @@ if ($request->filled("especialidad")) {
             'genero' => $psicologo->genero,
             'experiencia' => $psicologo->experiencia,
             'especialidades' => $psicologo->especialidades->pluck('nombre'),
+            'idiomas' => $psicologo->idiomas->pluck('nombre'),
             'introduccion' => $psicologo->introduccion,
             'horario' => $psicologo->horario,
             'correo' => $psicologo->users->email,
@@ -326,6 +375,7 @@ if ($request->filled("especialidad")) {
         try {
             $psicologo = Psicologo::findOrFail($id);
             $usuario = User::findOrFail($psicologo->user_id);
+
             $psicologoData = $requestPsicologo->only([
                 'titulo',
                 'introduccion',
@@ -334,9 +384,11 @@ if ($request->filled("especialidad")) {
                 'experiencia',
                 'horario'
             ]);
+
+            // No usamos 'idioma' string
+            unset($psicologoData['idioma']);
+
             $psicologo->update($psicologoData);
-
-
 
             $usuarioData = $requestUser->only(['apellido', 'email', 'password', 'fecha_nacimiento', 'imagen']);
             if ($requestUser->filled('nombre')) {
@@ -349,23 +401,33 @@ if ($request->filled("especialidad")) {
                 $usuarioData['fecha_nacimiento'] = Carbon::createFromFormat('d/m/Y', $requestUser->fecha_nacimiento)->format('Y-m-d');
             }
             $usuario->update($usuarioData);
+
+            // Especialidades (por nombre)
             if ($requestPsicologo->filled('especialidades')) {
                 $especialidadesNombres = $requestPsicologo->input('especialidades');
                 $especialidadesIds = [];
                 foreach ($especialidadesNombres as $nombre) {
                     $nombre = trim($nombre);
-                    if (empty($nombre)) {
-                        continue;
-                    }
-                    $especialidad = Especialidad::firstOrCreate(['nombre' => $nombre]);
-                    if (!$especialidad->idEspecialidad) {
-                        throw new \Exception("No se pudo crear o encontrar la especialidad: $nombre");
-                    }
-                    $especialidadesIds[] = $especialidad->idEspecialidad;
+                    if (empty($nombre)) continue;
+                    $esp = Especialidad::firstOrCreate(['nombre' => $nombre]);
+                    $especialidadesIds[] = $esp->idEspecialidad;
                 }
                 if (!empty($especialidadesIds)) {
                     $psicologo->especialidades()->sync($especialidadesIds);
                 }
+            }
+
+            // Idiomas (array de strings por nombre)
+            if ($requestPsicologo->filled('idiomas')) {
+                $entradas = $requestPsicologo->input('idiomas');
+                $ids = [];
+                foreach ($entradas as $val) {
+                    $nom = $this->normalizeName($val);
+                    if (!$nom) continue;
+                    $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
+                    $ids[] = $idioma->idIdioma;
+                }
+                $psicologo->idiomas()->sync($ids);
             }
 
             return HttpResponseHelper::make()
@@ -378,89 +440,70 @@ if ($request->filled("especialidad")) {
         }
     }
 
-//solo actualiza ahora imagen, nombre, apellido,Introducción Profesional, idioma y especialidades  M.
-public function actualizarPsicologo(Request $request, int $id): JsonResponse
-{
-    try {
-        $psicologo = Psicologo::findOrFail($id);
-        $usuario = User::findOrFail($psicologo->user_id);
+    // Actualiza imagen, nombre, apellido, presentación, país, género, experiencia, idiomas y especialidades
+    public function actualizarPsicologo(Request $request, int $id): JsonResponse
+    {
+        try {
+            $psicologo = Psicologo::findOrFail($id);
+            $usuario = User::findOrFail($psicologo->user_id);
 
-        // Actualizar datos del usuario
-        $usuarioData = [];
-        if ($request->filled('nombre')) {
-            $usuarioData['name'] = $request->input('nombre');
-        }
-        if ($request->filled('apellido')) {
-            $usuarioData['apellido'] = $request->input('apellido');
-        }
-        if ($request->filled('imagen')) {
-            $usuarioData['imagen'] = $request->input('imagen');
-        }
-        if ($request->filled('fecha_nacimiento')) {
-            $usuarioData['fecha_nacimiento'] = $request->input('fecha_nacimiento');
-        }
-        if (!empty($usuarioData)) {
-            $usuario->update($usuarioData);
-        }
+            // Usuario
+            $usuarioData = [];
+            if ($request->filled('nombre'))   $usuarioData['name'] = $request->input('nombre');
+            if ($request->filled('apellido')) $usuarioData['apellido'] = $request->input('apellido');
+            if ($request->filled('imagen'))   $usuarioData['imagen'] = $request->input('imagen');
+            if ($request->filled('fecha_nacimiento')) $usuarioData['fecha_nacimiento'] = $request->input('fecha_nacimiento');
+            if (!empty($usuarioData)) $usuario->update($usuarioData);
 
-        // Actualizar datos del psicólogo (AGREGAR ESTA PARTE)
-        $psicologoData = [];
-        if ($request->filled('titulo')) {
-            $psicologoData['titulo'] = $request->input('titulo');
-        }
-        if ($request->filled('introduccion')) {
-            $psicologoData['introduccion'] = $request->input('introduccion');
-        }
-        if ($request->filled('pais')) {
-            $psicologoData['pais'] = $request->input('pais');
-        }
-        if ($request->filled('genero')) {
-            $psicologoData['genero'] = $request->input('genero');
-        }
-        if ($request->filled('experiencia')) {
-            $psicologoData['experiencia'] = $request->input('experiencia');
-        }
-        // --- AGREGADO: CAMPO IDIOMA ---
-        if ($request->filled('idioma')) {
-            $psicologoData['idioma'] = $request->input('idioma');
-        }
-        // --- FIN AGREGADO ---
-        
-        if (!empty($psicologoData)) {
-            $psicologo->update($psicologoData);
-        }
-
-        // Resto del código para especialidades...
-        if ($request->filled('especialidades')) {
-            $especialidadesNombres = $request->input('especialidades');
-            $especialidadesIds = [];
-            foreach ($especialidadesNombres as $nombre) {
-                $nombre = trim($nombre);
-                if (empty($nombre)) {
-                    continue;
-                }
-                $especialidad = Especialidad::firstOrCreate(['nombre' => $nombre]);
-                if (!$especialidad->idEspecialidad) {
-                    throw new \Exception("No se pudo crear o encontrar la especialidad: $nombre");
-                }
-                $especialidadesIds[] = $especialidad->idEspecialidad;
+            // Psicólogo
+            $psicologoData = [];
+            foreach (['titulo','introduccion','pais','genero','experiencia','horario'] as $k) {
+                if ($request->filled($k)) $psicologoData[$k] = $request->input($k);
             }
-            if (!empty($especialidadesIds)) {
-                $psicologo->especialidades()->sync($especialidadesIds);
-            }
-        }
+            // NO escribimos 'idioma' como string
+            unset($psicologoData['idioma']);
 
-        return HttpResponseHelper::make()
-            ->successfulResponse('Psicólogo actualizado correctamente')
-            ->send();
-    } catch (\Exception $e) {
-        return HttpResponseHelper::make()
-            ->internalErrorResponse('Ocurrió un problema: ' . $e->getMessage())
-            ->send();
+            if (!empty($psicologoData)) $psicologo->update($psicologoData);
+
+            // Especialidades (array de nombres)
+            if ($request->filled('especialidades')) {
+                $especialidadesNombres = $request->input('especialidades');
+                $especialidadesIds = [];
+                foreach ($especialidadesNombres as $nombre) {
+                    $nombre = trim($nombre);
+                    if (empty($nombre)) continue;
+                    $esp = Especialidad::firstOrCreate(['nombre' => $nombre]);
+                    $especialidadesIds[] = $esp->idEspecialidad;
+                }
+                if (!empty($especialidadesIds)) {
+                    $psicologo->especialidades()->sync($especialidadesIds);
+                }
+            }
+
+            // Idiomas (array de nombres)
+            if ($request->filled('idiomas')) {
+                $entradas = $request->input('idiomas');
+                $ids = [];
+                foreach ($entradas as $val) {
+                    $nom = $this->normalizeName($val);
+                    if (!$nom) continue;
+                    $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
+                    $ids[] = $idioma->idIdioma;
+                }
+                $psicologo->idiomas()->sync($ids);
+            }
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Psicólogo actualizado correctamente')
+                ->send();
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Ocurrió un problema: ' . $e->getMessage())
+                ->send();
+        }
     }
-}
 
-    //Obtener las especialidades de un psicologo
+    // Obtener especialidades de un psicólogo
     public function obtenerEspecialidades(int $id): JsonResponse
     {
         try {
@@ -530,7 +573,6 @@ public function actualizarPsicologo(Request $request, int $id): JsonResponse
 
         $idPsicologo = $psicologo->idPsicologo;
 
-        // Obtener citas del psicólogo
         $totalCitas = Cita::where('idPsicologo', $idPsicologo)->count();
         $citasCompletadas = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'completada')->count();
         $citasPendientes = Cita::where('idPsicologo', $idPsicologo)->where('estado_Cita', 'pendiente')->count();
@@ -540,13 +582,11 @@ public function actualizarPsicologo(Request $request, int $id): JsonResponse
             ->whereIn('estado_Cita', ['completada', 'pendiente'])
             ->sum('duracion');
 
-        // Total de pacientes únicos
         $totalPacientes = Cita::where('idPsicologo', $idPsicologo)
             ->whereNotNull('idPaciente')
             ->distinct('idPaciente')
             ->count('idPaciente');
 
-        // Nuevos pacientes en los últimos 30 días (por su primera cita)
         $nuevosPacientes = Cita::select('idPaciente')
             ->where('idPsicologo', $idPsicologo)
             ->whereNotNull('idPaciente')
@@ -574,7 +614,6 @@ public function actualizarPsicologo(Request $request, int $id): JsonResponse
         try {
             DB::beginTransaction();
 
-            // Buscar el psicólogo
             $psicologo = Psicologo::find($id);
 
             if (!$psicologo) {
@@ -584,16 +623,11 @@ public function actualizarPsicologo(Request $request, int $id): JsonResponse
                 ], 404);
             }
 
-            // Eliminar citas asociadas
             DB::table('citas')->where('idPsicologo', $psicologo->idPsicologo)->delete();
 
-            // Obtener el user_id del psicólogo
             $userId = $psicologo->user_id;
 
-            // Eliminar el psicólogo
             DB::table('psicologos')->where('idPsicologo', $id)->delete();
-
-            // Eliminar el usuario
             DB::table('users')->where('user_id', $userId)->delete();
 
             DB::commit();
@@ -613,46 +647,86 @@ public function actualizarPsicologo(Request $request, int $id): JsonResponse
         }
     }
 
-     // AGREGAR ESTE MÉTODO NUEVO PARA OBTENER IDIOMAS DISPONIBLES M.
+    /**
+     * Devuelve idiomas disponibles (desde tabla idiomas) – útil para catálogos.
+     */
     public function getIdiomasDisponibles(): JsonResponse
-{
-    try {
-        // Obtener todos los idiomas únicos que usan los psicólogos
-        $idiomas = Psicologo::whereNotNull('idioma')
-            ->select('idioma')
-            ->distinct()
-            ->get()
-            ->pluck('idioma')
-            ->filter()
-            ->flatMap(fn($i) => array_map('trim', explode(',', $i)))
-            ->unique()
-            ->values();
+    {
+        try {
+            $idiomas = Idioma::orderBy('nombre')->get(['idIdioma','nombre'])->pluck('nombre');
 
-        if ($idiomas->isEmpty()) {
-            $idiomas = collect(['es', 'en', 'fr', 'de', 'pt', 'it']);
+            if ($idiomas->isEmpty()) {
+                // fallback opcional
+                $idiomas = collect(['Español','Inglés','Francés','Alemán','Portugués','Italiano']);
+            }
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Idiomas obtenidos correctamente', $idiomas->values())
+                ->send();
+
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
+                ->send();
         }
-
-        $idiomas = $idiomas->map(fn($codigo) => [
-            'codigo' => $codigo,
-            'nombre' => [
-                'es' => 'Español',
-                'en' => 'Inglés',
-                'fr' => 'Francés',
-                'de' => 'Alemán',
-                'pt' => 'Portugués',
-                'it' => 'Italiano',
-            ][$codigo] ?? $codigo,
-        ]);
-
-        // 👇 Aquí el return que faltaba
-        return HttpResponseHelper::make()
-            ->successfulResponse('Idiomas obtenidos correctamente', $idiomas)
-            ->send();
-
-    } catch (\Exception $e) {
-        return HttpResponseHelper::make()
-            ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
-            ->send();
     }
+
+    /**
+     * Opciones dinámicas de filtros basadas en psicólogos activos y catálogos.
+     * Alias: /api/psicologos/filters y /api/psicologos/filter-options (defínelo en routes).
+     */
+    public function getFilterOptions(): JsonResponse
+    {
+        try {
+            $activos = Psicologo::with(['idiomas', 'users' => function($q){ $q->where('estado',1);}])
+                ->whereHas('users', fn($q)=>$q->where('estado',1))
+                ->get(['idPsicologo','pais','genero','titulo']);
+
+            $paises  = $activos->pluck('pais')->filter()->unique()->values();
+            $generos = $activos->pluck('genero')->filter()->unique()->values();
+
+            $idiomas = $activos->flatMap(fn($p)=>$p->idiomas->pluck('nombre'))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $especialidades = Especialidad::query()->pluck('nombre')->filter()->unique()->values();
+
+            // Enfoques mediante mapeo a título y/o presencia como especialidad
+            $mapeoEnfoques = [
+                'niños' => 'Pediatra',
+                'adolescentes' => 'Pedagogo',
+                'familiar' => 'Psicoanalista',
+                'pareja' => 'Terapeuta',
+                'adulto' => 'Conductual'
+            ];
+
+            $titulosActivos = $activos->pluck('titulo')->filter()->unique()->values()->all();
+            $enfoques = [];
+            foreach ($mapeoEnfoques as $clave => $titulo) {
+                $existeTitulo = in_array($titulo, $titulosActivos, true);
+                $existeEspecialidad = Especialidad::where('nombre', $clave)->exists();
+                if ($existeTitulo || $existeEspecialidad) {
+                    $enfoques[] = $clave;
+                }
+            }
+
+            $result = [
+                'paises'         => $paises,
+                'generos'        => $generos,
+                'idiomas'        => $idiomas,       // nombres "Inglés", "Alemán", ...
+                'enfoques'       => array_values(array_unique($enfoques)),
+                'especialidades' => $especialidades,
+            ];
+
+            return HttpResponseHelper::make()
+                ->successfulResponse('Opciones de filtros obtenidas correctamente', $result)
+                ->send();
+
+        } catch (\Exception $e) {
+            return HttpResponseHelper::make()
+                ->internalErrorResponse('Error al obtener opciones de filtros: ' . $e->getMessage())
+                ->send();
+        }
     }
 }

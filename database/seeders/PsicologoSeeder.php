@@ -6,9 +6,18 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Psicologo;
+use App\Models\Idioma;
+use Illuminate\Support\Str;
+
 
 class PsicologoSeeder extends Seeder
 {
+    private function norm(string $s): string
+    {
+    $s = trim($s);
+    $s = mb_strtolower($s, 'UTF-8');
+    return mb_convert_case($s, MB_CASE_TITLE, 'UTF-8');
+    }
     public function run(): void
     {
         $psicologos = [
@@ -29,7 +38,10 @@ class PsicologoSeeder extends Seeder
                     "Martes" => [["10:00", "14:00"]],
                     "Jueves" => [["13:00", "17:00"]]
                 ],
-                'especialidad' => 1
+                'especialidad' => 1,
+                'idiomas' => ['Español', 'Inglés']
+               
+
             ],
             [
                 'titulo' => 'Psicoanalista',
@@ -48,7 +60,8 @@ class PsicologoSeeder extends Seeder
                     "Miercoles" => [["14:00", "18:00"]],
                     "Viernes" => [["10:00", "15:00"]]
                 ],
-                'especialidad' => 2
+                'especialidad' => 2,
+                'idiomas' => ['Español', 'Francés']
             ],
             [
                 'titulo' => 'Terapeuta',
@@ -67,7 +80,9 @@ class PsicologoSeeder extends Seeder
                     "Miercoles" => [["09:00", "13:00"]],
                     "Jueves" => [["15:00", "19:00"]]
                 ],
-                'especialidad' => 3
+                'especialidad' => 3,
+                'idiomas' => ['Francés'],
+
             ],
             [
                 'titulo' => 'Pediatra',
@@ -86,7 +101,8 @@ class PsicologoSeeder extends Seeder
                     "Jueves" => [["11:00", "16:00"]],
                     "Viernes" => [["14:00", "18:00"]]
                 ],
-                'especialidad' => 4
+                'especialidad' => 4,
+                'idiomas' => ['Japonés', 'Francés', 'Español'],
             ],
             [
                 'titulo' => 'Conductual',
@@ -105,7 +121,8 @@ class PsicologoSeeder extends Seeder
                     "Miercoles" => [["13:00", "17:00"]],
                     "Viernes" => [["10:00", "14:00"]]
                 ],
-                'especialidad' => 5
+                'especialidad' => 5,
+                'idiomas' => ['Español']
             ],
             [
                 'titulo' => 'Pedadgogo',
@@ -124,7 +141,8 @@ class PsicologoSeeder extends Seeder
                     "Jueves" => [["10:00", "15:00"]],
                     "Sabado" => [["09:00", "13:00"]]
                 ],
-                'especialidad' => 2
+                'especialidad' => 2,
+                'idiomas' => ['Español']
             ]
         ];
 
@@ -153,6 +171,18 @@ class PsicologoSeeder extends Seeder
             ]);
 
             $psicologo->especialidades()->attach([$data['especialidad']]);
+             $nombres = array_map(fn($n) => $this->norm($n), $data['idiomas'] ?? []);
+
+                // Asegura que todos existen (si falta alguno, lo crea):
+                 // (Si prefieres NO crear nuevos, puedes omitir este bloque y solo buscar.)
+            $ids = [];
+            foreach ($nombres as $nombre) {
+                $idioma = Idioma::firstOrCreate(['nombre' => $nombre]);
+                $ids[] = $idioma->idIdioma;
+    }
+
+    // Evita duplicados si corres el seeder varias veces:
+    $psicologo->idiomas()->syncWithoutDetaching($ids);
         }
     }
 }

@@ -25,6 +25,7 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Urls\UrlsController;
 use App\Http\Controllers\NotificationAdminController;
 use App\Http\Controllers\PersonalPermissionController; //<--Agregado M.
+use App\Http\Controllers\Idioma\IdiomaController; 
 
 // 🚀 RUTAS DE NOTIFICACIONES AUTOMÁTICAS
 Route::controller(NotificationAdminController::class)
@@ -175,18 +176,24 @@ Route::controller(PsicologosController::class)
                 Route::post("/", "createPsicologo");
                 Route::put("/{id}", "updatePsicologo");
                 Route::delete("/{id}", "DeletePsicologo");
-                Route::put("/estado/{id}", "cambiarEstadoPsicologo"); // Cambiar estado del psicólogo A = Activo, I = Inactivo
-                Route::get("/inactivo", "showInactivePsicologos"); // Nueva ruta para listar psicólogos inactivos
-                Route::get("/nombre", "listarNombre"); // listar nombre, apellido y idPsicologo de psicologos activos
-                // AGREGAR ESTA NUEVA RUTA PARA IDIOMAS agregado M.
+                Route::put("/estado/{id}", "cambiarEstadoPsicologo");
+                Route::get("/inactivo", "showInactivePsicologos");
+                Route::get("/nombre", "listarNombre");
                 Route::get("/idiomas/disponibles", "getIdiomasDisponibles");
             },
         );
-        
+
         Route::put("/update/{id}", "actualizarPsicologo");
         Route::get("/especialidades/{id}", "obtenerEspecialidades");
-        Route::get("/", "showAllPsicologos"); // listar psicologos activos
-        Route::get("/{id}", "showById");
+
+        // ===== Opciones dinámicas de filtros (tres alias) =====
+        Route::get("/filters", "getFilterOptions");          // ya existía
+        Route::get("/filter-options", "getFilterOptions");   // alias para el front
+        Route::get("/getFilterOptions", "getFilterOptions"); // alias para el front
+        // ======================================================
+
+        Route::get("/", "showAllPsicologos");
+        Route::get("/{id}", "showById"); // mantener al final para no capturar los alias
     });
 
 Route::controller(BlogController::class)
@@ -252,6 +259,16 @@ Route::controller(EspecialidadController::class)
                 Route::delete("/{id}", "destroyEspecialidad");
             },
         );
+    });
+    Route::controller(IdiomaController::class)
+    ->prefix('idiomas')
+    ->group(function () {
+        Route::get('/', 'index');
+        Route::group(['middleware' => ['auth:sanctum','role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION']], function () {
+            Route::post('/', 'store');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+        });
     });
 
 Route::controller(CategoriaController::class)
