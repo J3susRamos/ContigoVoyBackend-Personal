@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Blog extends Model
 {
@@ -129,13 +130,14 @@ class Blog extends Model
         return $this->hasMany(Comentario::class, 'idBlog', 'id');
     }
 
-      public function meta(): HasOne
+      public function metadata(): HasOne
     {
         return $this->hasOne(BlogMetadata::class, 'blog_id', 'idBlog');
     }
 
-    public function imagenes(): HasMany
+    public function images()
     {
-        return $this->hasMany(BlogImages::class, 'blog_id', 'idBlog');
+        return $this->hasMany(BlogImage::class, 'blog_id', 'idBlog');
     }
+
 }

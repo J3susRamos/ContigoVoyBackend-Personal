@@ -39,26 +39,29 @@ class BlogController extends Controller
             $blog = Blog::create($data);
 
             // ✅ Guardar metadata si viene en el request
-            if ($request->has(['meta_title', 'meta_description', 'keywords'])) {
+            if ($request->has(['metaTitle', 'metaDescription', 'keywords'])) {
                 BlogMetadata::create([
                     'blog_id' => $blog->idBlog,
-                    'metaTitle' => $request->input('meta_title'),
-                    'metaDescription' => $request->input('meta_description'),
+                    'metaTitle' => $request->input('metaTitle'),
+                    'metaDescription' => $request->input('metaDescription'),
                     'keywords' => $request->input('keywords'),
                 ]);
             }
 
+
             // ✅ Guardar las imágenes asociadas (si hay)
-            if ($request->has('images')) {
-                foreach ($request->images as $image) {
+            if ($request->has('imagenesMeta')) {
+                foreach ($request->imagenesMeta as $img) {
                     BlogImages::create([
                         'blog_id' => $blog->idBlog,
-                        'src' => $image['src'],
-                        'title' => $image['title'] ?? null,
-                        'alt' => $image['alt'] ?? null,
+                        'src' => $img['url'],          // ⚡ Usar 'url' en vez de 'src'
+                        'title' => $img['title'] ?? null,
+                        'alt' => $img['altText'] ?? null,
                     ]);
                 }
             }
+
+
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog creado correctamente')
@@ -137,14 +140,19 @@ class BlogController extends Controller
         try {
             // Si el identificador es numérico, buscar por ID
             if (is_numeric($identifier)) {
-                $blog = Blog::with(['categoria', 'psicologo.users'])->find($identifier);
-            } else {
-                // Si no es numérico, buscar por tema/slug
-                $searchTerm = str_replace('-', ' ', urldecode($identifier));
                 $blog = Blog::with(['categoria', 'psicologo.users'])
-                    ->where('tema', $searchTerm)
-                    ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%')
-                    ->first();
+                    ->find($identifier);
+            } else {
+                $decoded = urldecode($identifier);
+                $searchTerm = str_replace('-', ' ', $decoded);
+
+
+                // Si no es numérico, buscar por tema/slug
+                $blog = Blog::with(['categoria', 'psicologo.users', 'metadata'])
+                ->where('slug', $decoded) // ← buscar primero por slug exacto
+                ->orWhere('tema', $searchTerm) // ← o tema igual
+                ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%') // ← o tema parecido
+                ->first();
             }
 
             if (!$blog) {
@@ -166,6 +174,7 @@ class BlogController extends Controller
                 'idPsicologo' => $blog->idPsicologo,
                 'categoria' => $blog->categoria?->nombre,
                 'fecha' => $blog->fecha_publicado,
+
             ];
 
             return HttpResponseHelper::make()
@@ -192,6 +201,8 @@ class BlogController extends Controller
                     ->send();
             }
 
+
+
             $responseData = [
                 'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
@@ -206,6 +217,7 @@ class BlogController extends Controller
                 'idPsicologo' => $blog->idPsicologo,
                 'categoria' =>  $blog->categoria->nombre,
                 'fecha' => $blog->fecha_publicado,
+
             ];
 
             return HttpResponseHelper::make()
@@ -216,6 +228,8 @@ class BlogController extends Controller
                 ->internalErrorResponse('Ocurrió un problema al obtener el blog: ' . $e->getMessage())
                 ->send();
         }
+
+
     }
 
     public function showAllAuthors(): JsonResponse

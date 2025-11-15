@@ -15,11 +15,12 @@ class BlogMetadata extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'blog_id',
-        'metaTitle',
-        'keywords',
-        'metaDescription',
+    'blog_id',
+    'metaTitle',
+    'metaDescription',
+    'keywords',
     ];
+
 
     public function blog(): BelongsTo
     {
