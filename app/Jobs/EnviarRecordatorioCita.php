@@ -11,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Log;
 class EnviarRecordatorioCita implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -37,10 +37,18 @@ class EnviarRecordatorioCita implements ShouldQueue
         $hora = $this->cita->hora_cita;
 
         // Enviar correo
-        Mail::to($email)->send(new CitaReminderMail($nombre, $fecha, $hora));
-
+        try {
+            Mail::to($email)->send(new CitaReminderMail($nombre, $fecha, $hora));
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
+        }
         // Enviar WhatsApp
         $message = "Hola $nombre, recuerda tu cita:\nFecha: $fecha\nHora: $hora";
-        $whatsappService->sendTextMessage($phone, $message);
+
+        try {
+            $this->whatsappService->sendTextMessage($phone, $message);
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
+        }
     }
 }
