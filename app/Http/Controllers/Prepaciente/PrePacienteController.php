@@ -15,6 +15,7 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\EnviarNotificacionesPrePaciente;
 use App\Jobs\EnviarRecordatorioCita;
+use App\Jobs\EnviarConfirmacionCitaWhatsApp;
 use Carbon\Carbon;
 
 
@@ -28,7 +29,7 @@ class PrePacienteController extends Controller
                 "celular" => "required|string|min:3|max:30",
                 "correo" =>
                     "required|email|max:150",
-                 "idPsicologo" => "required|exists:psicologos,idPsicologo",
+                "idPsicologo" => "required|exists:psicologos,idPsicologo",
             ]);
 
             $prePaciente = PrePaciente::create($prePacienteValidated);
@@ -47,13 +48,12 @@ class PrePacienteController extends Controller
                 "idPrePaciente" => $id,
             ]);
 
-            $cita =Cita::create($citaData);
+            $cita = Cita::create($citaData);
 
             $horaRecordatorio = Carbon::parse($cita->fecha_cita . ' ' . $cita->hora_cita)
-                                ->subHours(3);
-
-
+                ->subHours(3);
             EnviarRecordatorioCita::dispatch($cita)->delay($horaRecordatorio);
+            EnviarConfirmacionCitaWhatsApp::dispatch($cita);
 
             // Cargamos la relación con el psicólogo
             $prePaciente = PrePaciente::with("psicologo.users")->find($id);
@@ -71,16 +71,16 @@ class PrePacienteController extends Controller
             );
             $nombrePsicologo =
                 $prePaciente->psicologo && $prePaciente->psicologo->users
-                    ? $prePaciente->psicologo->users->name . " " . $prePaciente->psicologo->users->apellido
-                    : "tu psicólogo asignado";
+                ? $prePaciente->psicologo->users->name . " " . $prePaciente->psicologo->users->apellido
+                : "tu psicólogo asignado";
 
-           EnviarNotificacionesPrePaciente::dispatch(
-            $prePaciente,
-            $datos,
-            $request->input("fecha_cita"),
-            $request->input("hora_cita"),
-            $nombrePsicologo
-             );
+            EnviarNotificacionesPrePaciente::dispatch(
+                $prePaciente,
+                $datos,
+                $request->input("fecha_cita"),
+                $request->input("hora_cita"),
+                $nombrePsicologo
+            );
 
             return HttpResponseHelper::make()
                 ->successfulResponse(
@@ -91,7 +91,7 @@ class PrePacienteController extends Controller
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
                     "Ocurrió un problema al procesar la solicitud: " .
-                        $e->getMessage(),
+                    $e->getMessage(),
                 )
                 ->send();
         }
