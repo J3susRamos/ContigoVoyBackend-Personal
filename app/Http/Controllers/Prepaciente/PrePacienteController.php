@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Prepaciente;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\EnviarConfirmacionCitaCorreo;
 use Illuminate\Http\Request;
 use App\Models\PrePaciente;
 use App\Mail\PrePacienteCreado;
@@ -52,8 +53,9 @@ class PrePacienteController extends Controller
 
             $horaRecordatorio = Carbon::parse($cita->fecha_cita . ' ' . $cita->hora_cita)
                 ->subHours(3);
-            EnviarRecordatorioCita::dispatch($cita)->delay($horaRecordatorio);
             EnviarConfirmacionCitaWhatsApp::dispatch($cita);
+            EnviarConfirmacionCitaCorreo::dispatch($cita);
+            EnviarRecordatorioCita::dispatch($cita)->delay($horaRecordatorio);
 
             // Cargamos la relación con el psicólogo
             $prePaciente = PrePaciente::with("psicologo.users")->find($id);
@@ -74,13 +76,13 @@ class PrePacienteController extends Controller
                 ? $prePaciente->psicologo->users->name . " " . $prePaciente->psicologo->users->apellido
                 : "tu psicólogo asignado";
 
-            EnviarNotificacionesPrePaciente::dispatch(
+            /* EnviarNotificacionesPrePaciente::dispatch(
                 $prePaciente,
                 $datos,
                 $request->input("fecha_cita"),
                 $request->input("hora_cita"),
                 $nombrePsicologo
-            );
+            ); */
 
             return HttpResponseHelper::make()
                 ->successfulResponse(

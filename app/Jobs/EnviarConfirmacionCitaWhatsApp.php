@@ -32,45 +32,28 @@ class EnviarConfirmacionCitaWhatsApp implements ShouldQueue
      */
     public function handle(WhatsAppService $whatsappService): void
     {
+
+        // Obtener datos del paciente
+        $this->whatsappService = $whatsappService;
+        $nombre = $this->cita->prepaciente->nombre ?? $this->cita->paciente->nombre;
+        $phone = $this->cita->prepaciente->celular ?? $this->cita->paciente->celular;
+
+        // Obtener datos del psicólogo
+        $nombrePsicologo = 'su psicólogo asignado';
+        if ($this->cita->psicologo && $this->cita->psicologo->users) {
+            $nombrePsicologo = $this->cita->psicologo->users->name . ' ' . $this->cita->psicologo->users->apellido;
+        }
+
+        // Formatear fecha y hora
+        $fechaFormateada = Carbon::parse($this->cita->fecha_cita)->format('d/m/Y');
+        $horaFormateada = Carbon::parse($this->cita->hora_cita)->format('H:i');
+
         try {
-            $this->whatsappService = $whatsappService;
+            $this->whatsappService->sendAppointmentMessage($phone, $nombrePsicologo, $fechaFormateada, $horaFormateada);
+        } catch (\Throwable $th) {
+            Log::error($th->getMessage());
 
-            // Obtener datos del paciente
-            $nombre = $this->cita->prepaciente->nombre ?? $this->cita->paciente->nombre;
-            $phone = $this->cita->prepaciente->celular ?? $this->cita->paciente->celular;
 
-            if (!$phone) {
-                Log::warning('No se pudo enviar WhatsApp - teléfono no disponible', [
-                    'cita_id' => $this->cita->idCita
-                ]);
-                return;
-            }
-
-            // Obtener datos del psicólogo
-            $nombrePsicologo = 'su psicólogo asignado';
-            if ($this->cita->psicologo && $this->cita->psicologo->users) {
-                $nombrePsicologo = $this->cita->psicologo->users->name . ' ' . $this->cita->psicologo->users->apellido;
-            }
-
-            // Formateos
-            $fecha = Carbon::parse($this->cita->fecha_cita)->format('Y-m-d');
-            $hora = Carbon::parse($this->cita->hora_cita)->format('H:i'); // 24h con minutos
-
-            $this->whatsappService->sendAppointmentMessage(
-                $phone,
-                $nombrePsicologo,
-                $fecha,
-                $hora,
-            );
-
-        } catch (\Exception $e) {
-            Log::error('Error enviando template cita_gratis por WhatsApp', [
-                'cita_id' => $this->cita->idCita,
-                'error' => $e->getMessage(),
-                'telefono' => $phone ?? 'N/A'
-            ]);
-
-            throw $e;
         }
     }
 
@@ -79,10 +62,13 @@ class EnviarConfirmacionCitaWhatsApp implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        Log::error('Job template cita_gratis falló definitivamente', [
+        Log::error('Job de confirmación WhatsApp falló definitivamente', [
             'cita_id' => $this->cita->idCita,
             'error' => $exception->getMessage(),
-            'template_usado' => 'cita_gratis'
+            'intentos_totales' => $this->tries
         ]);
+
+        // Aquí podrías enviar una notificación al admin o registrar en una tabla de fallos
+        // Por ejemplo, crear un registro en una tabla 'notification_failures'
     }
 }
