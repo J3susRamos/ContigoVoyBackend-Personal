@@ -28,7 +28,7 @@ class PrePacienteController extends Controller
                 "nombre" => "required|string|max:150",
                 "celular" => "required|string|min:3|max:30",
                 "correo" =>
-                    "required|email|max:150",
+                "required|email|max:150",
                 "idPsicologo" => "required|exists:psicologos,idPsicologo",
             ]);
 
@@ -74,12 +74,15 @@ class PrePacienteController extends Controller
                 ? $prePaciente->psicologo->users->name . " " . $prePaciente->psicologo->users->apellido
                 : "tu psicólogo asignado";
 
+            $meet_link = $prePaciente->psicologo->meet_link ?? null;
+
             EnviarNotificacionesPrePaciente::dispatch(
                 $prePaciente,
                 $datos,
                 $request->input("fecha_cita"),
                 $request->input("hora_cita"),
-                $nombrePsicologo
+                $nombrePsicologo,
+                $meet_link
             );
 
             return HttpResponseHelper::make()
@@ -91,7 +94,7 @@ class PrePacienteController extends Controller
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
                     "Ocurrió un problema al procesar la solicitud: " .
-                    $e->getMessage(),
+                        $e->getMessage(),
                 )
                 ->send();
         }
@@ -149,7 +152,7 @@ class PrePacienteController extends Controller
                     "nombre" => "required|string|max:150",
                     "celular" => "required|string|min:3|max:30",
                     "correo" =>
-                        "required|email|unique:pre_pacientes,correo|max:150",
+                    "required|email|unique:pre_pacientes,correo|max:150",
                 ]),
             );
 
@@ -185,6 +188,4 @@ class PrePacienteController extends Controller
                 ->send();
         }
     }
-
-
 }
