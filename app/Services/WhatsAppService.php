@@ -155,14 +155,14 @@ class WhatsAppService
         string $fecha,
         string $hora,
         string $templateOption = "confirmation",
+        ?string $nombre = null
     ): array {
         $url = "{$this->baseUrl}/api/send-message";
 
-        // Mapear templateOption a valores válidos del whatsapp-service
         $validOptions = [
             "confirmation" => "cita_gratis",
             "reminder" => "recordatorio_cita",
-            "cancellation" => "recordatorio_cita", // usar recordatorio como base
+            "cancellation" => "recordatorio_cita",
         ];
 
         $payload = [
@@ -173,8 +173,13 @@ class WhatsAppService
             "hora" => $hora,
         ];
 
+        if ($nombre) {
+            $payload['nombre'] = $nombre;
+        }
+
         return $this->makeRequest($url, $payload, "POST");
     }
+
 
     /**
      * Enviar mensaje de confirmación de cita
@@ -184,6 +189,7 @@ class WhatsAppService
         string $psicologo,
         string $fecha,
         string $hora,
+        ?string $nombre = null
     ): array {
         return $this->sendAppointmentMessage(
             $to,
@@ -191,6 +197,7 @@ class WhatsAppService
             $fecha,
             $hora,
             "confirmation",
+            $nombre
         );
     }
 
