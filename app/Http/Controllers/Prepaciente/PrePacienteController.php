@@ -76,13 +76,16 @@ class PrePacienteController extends Controller
                 ? $prePaciente->psicologo->users->name . " " . $prePaciente->psicologo->users->apellido
                 : "tu psicólogo asignado";
 
-            /* EnviarNotificacionesPrePaciente::dispatch(
+            $meet_link = $prePaciente->psicologo->meet_link ?? null;
+
+            EnviarNotificacionesPrePaciente::dispatch(
                 $prePaciente,
                 $datos,
                 $request->input("fecha_cita"),
                 $request->input("hora_cita"),
-                $nombrePsicologo
-            ); */
+                $nombrePsicologo,
+                $meet_link
+            );
 
             return HttpResponseHelper::make()
                 ->successfulResponse(
@@ -187,6 +190,4 @@ class PrePacienteController extends Controller
                 ->send();
         }
     }
-
-
 }

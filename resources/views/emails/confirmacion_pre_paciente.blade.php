@@ -125,6 +125,11 @@
                     <li><strong>📅 Fecha:</strong> {{ $datos['fecha'] ?? 'No disponible' }}</li>
                     <li><strong>🕒 Hora:</strong> {{ $datos['hora'] ?? 'No disponible' }}</li>
                     <li><strong>🧠 Psicólogo:</strong> {{ $datos['psicologo'] ?? 'No disponible' }}</li>
+                    @if(!empty($meet_link))
+                        <li><strong>💻 Enlace de Google Meet:</strong> <a href="{{ $meet_link }}"
+                                target="_blank">{{ $meet_link }}</a></li>
+                    @endif
+
                 </ul>
             </div>
 

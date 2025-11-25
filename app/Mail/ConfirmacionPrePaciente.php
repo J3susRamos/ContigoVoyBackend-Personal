@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class ConfirmacionPrePaciente extends Mailable
 {
@@ -29,7 +30,7 @@ class ConfirmacionPrePaciente extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-             subject: '🌿¡Gracias por dar este paso hacia tu bienestar! 💜',
+            subject: '🌿¡Gracias por dar este paso hacia tu bienestar! 💜',
         );
     }
 
@@ -40,7 +41,10 @@ class ConfirmacionPrePaciente extends Mailable
     {
         return new Content(
             view: 'emails.confirmacion_pre_paciente',
-            with: ['datos' => $this->datos]
+            with: [
+                'datos' => $this->datos,
+                'meet_link' => $this->datos['meet_link'] ?? null,
+            ]
         );
     }
 
