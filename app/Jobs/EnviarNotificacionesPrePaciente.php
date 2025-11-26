@@ -69,28 +69,24 @@ class EnviarNotificacionesPrePaciente implements ShouldQueue
             Log::info("Correo enviado al paciente correctamente");
 
             // WhatsApp
-            $mensaje = "¡Hola {$this->prePaciente->nombre}! 👋\n\n" .
-                "✅ Tu primera cita GRATUITA ha sido confirmada:\n\n" .
-                "📅 Fecha: {$this->fecha}\n" .
-                "🕐 Hora: {$this->hora}\n" .
-                "👨‍⚕️ Psicólogo: {$this->nombrePsicologo}\n\n" .
+            $mensaje = "👋 ¡Hola {$this->prePaciente->nombre}!
 
-                "🎉 ¡Recuerda que tu primera consulta es GRATIS!\n\n" .
-                "¡Te esperamos! 🌟";
+Tu consulta **GRATIS** está lista 💜  
+Nos vemos el {$this->fecha} a las {$this->hora}.
 
-            // Agregar link de Meet si existe
-            if (!empty($this->meet_link)) {
-                $mensaje .= "\n💻 Enlace de Google Meet: {$this->meet_link}";
-            }
+Ingresa al Meet aquí:  
+💻 {$this->meet_link}
+
+Cualquier duda, escríbenos 😊";
 
 
             $whatsappService = app(WhatsAppService::class);
             $whatsappService->sendTextMessage($this->prePaciente->celular, $mensaje);
 
-             Log::info('Datos recibidos por el Job', [
-            'meet_link' => $this->meet_link,
-            'datos_meet_link' => $this->datos['meet_link'] ?? 'NO EXISTE',
-        ]);
+            Log::info('Datos recibidos por el Job', [
+                'meet_link' => $this->meet_link,
+                'datos_meet_link' => $this->datos['meet_link'] ?? 'NO EXISTE',
+            ]);
         } catch (\Exception $e) {
             Log::error('❌❌❌ ERROR GENERAL en envío de notificaciones: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
