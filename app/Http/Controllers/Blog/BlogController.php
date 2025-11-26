@@ -77,7 +77,7 @@ class BlogController extends Controller
     public function showAllBlogs(): JsonResponse
     {
         try {
-            $blogs = Blog::with(['psicologo.users', 'categoria'])->orderBy('fecha_publicado','desc')->get()->map(function ($blog) {
+            $blogs = Blog::with(['psicologo.users', 'categoria'])->orderBy('fecha_publicado', 'desc')->get()->map(function ($blog) {
                 return [
                     'id' => $blog->idBlog,
                     'tema' => $blog->tema,
@@ -109,7 +109,7 @@ class BlogController extends Controller
                 'psicologo:idPsicologo,user_id',
                 'psicologo.users:user_id,name,apellido,imagen',
                 'categoria:idCategoria,nombre'
-            ])->orderBy('fecha_publicado','desc')->get();
+            ])->orderBy('fecha_publicado', 'desc')->get();
 
             $blogs = $blogs->map(fn($blog) => [
                 'idBlog' => $blog->idBlog,
@@ -149,10 +149,10 @@ class BlogController extends Controller
 
                 // Si no es numérico, buscar por tema/slug
                 $blog = Blog::with(['categoria', 'psicologo.users', 'metadata'])
-                ->where('slug', $decoded) // ← buscar primero por slug exacto
-                ->orWhere('tema', $searchTerm) // ← o tema igual
-                ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%') // ← o tema parecido
-                ->first();
+                    ->where('slug', $decoded) // ← buscar primero por slug exacto
+                    ->orWhere('tema', $searchTerm) // ← o tema igual
+                    ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%') // ← o tema parecido
+                    ->first();
             }
 
             if (!$blog) {
@@ -193,7 +193,7 @@ class BlogController extends Controller
     public function showByIdOnly(int $id): JsonResponse
     {
         try {
-            $blog = Blog::with(['categoria', 'psicologo.users'])->find($id);
+            $blog = Blog::with(['categoria', 'psicologo.users', 'metadata', 'images'])->findOrFail($id);
 
             if (!$blog) {
                 return HttpResponseHelper::make()
@@ -213,10 +213,24 @@ class BlogController extends Controller
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
                 'psicologoImagenId' => $blog->psicologo?->users->imagen,
-                'idCategoria'=> $blog->categoria->idCategoria,
+                'idCategoria' => $blog->categoria->idCategoria,
                 'idPsicologo' => $blog->idPsicologo,
-                'categoria' =>  $blog->categoria->nombre,
+                'categoria' => $blog->categoria->nombre,
                 'fecha' => $blog->fecha_publicado,
+
+                'metaTitle' => $blog->metadata?->metaTitle,
+                'metaDescription' => $blog->metadata?->metaDescription,
+                'keywords' => $blog->metadata?->keywords,
+
+                // (Opcional) si quieres devolver también las imágenes con title/alt:
+                'imagenesMeta' => $blog->images->map(function ($img) {
+                    return [
+                        'id' => $img->id,
+                        'url' => $img->src,
+                        'title' => $img->title,
+                        'altText' => $img->alt,
+                    ];
+                }),
 
             ];
 
