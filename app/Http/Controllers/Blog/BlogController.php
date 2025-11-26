@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Blog;
 
+
 use App\Http\Controllers\Controller;
 use App\Models\Blog;
+use App\Models\BlogMetadata;
+use App\Models\BlogImages;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\PostBlogs\PostBlogs;
 use App\Models\Psicologo;
@@ -11,10 +14,14 @@ use Illuminate\Support\Str;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Http\JsonResponse;
 
+
+
+
 class BlogController extends Controller
 {
     public function createBlog(PostBlogs $request): JsonResponse
     {
+        \Log::info('Datos recibidos:', $request->all());
         try {
             $userId = Auth::id();
             $psicologo = Psicologo::where('user_id', $userId)->first();
@@ -29,7 +36,32 @@ class BlogController extends Controller
             $data['idPsicologo'] = $psicologo->idPsicologo;
             $data['fecha_publicado'] = now();
 
-            Blog::create($data);
+            $blog = Blog::create($data);
+
+            // ✅ Guardar metadata si viene en el request
+            if ($request->has(['metaTitle', 'metaDescription', 'keywords'])) {
+                BlogMetadata::create([
+                    'blog_id' => $blog->idBlog,
+                    'metaTitle' => $request->input('metaTitle'),
+                    'metaDescription' => $request->input('metaDescription'),
+                    'keywords' => $request->input('keywords'),
+                ]);
+            }
+
+
+            // ✅ Guardar las imágenes asociadas (si hay)
+            if ($request->has('imagenesMeta')) {
+                foreach ($request->imagenesMeta as $img) {
+                    BlogImages::create([
+                        'blog_id' => $blog->idBlog,
+                        'src' => $img['url'],          // ⚡ Usar 'url' en vez de 'src'
+                        'title' => $img['title'] ?? null,
+                        'alt' => $img['altText'] ?? null,
+                    ]);
+                }
+            }
+
+
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog creado correctamente')
@@ -40,6 +72,7 @@ class BlogController extends Controller
                 ->send();
         }
     }
+
 
     public function showAllBlogs(): JsonResponse
     {
@@ -107,14 +140,19 @@ class BlogController extends Controller
         try {
             // Si el identificador es numérico, buscar por ID
             if (is_numeric($identifier)) {
-                $blog = Blog::with(['categoria', 'psicologo.users'])->find($identifier);
-            } else {
-                // Si no es numérico, buscar por tema/slug
-                $searchTerm = str_replace('-', ' ', urldecode($identifier));
                 $blog = Blog::with(['categoria', 'psicologo.users'])
-                    ->where('tema', $searchTerm)
-                    ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%')
-                    ->first();
+                    ->find($identifier);
+            } else {
+                $decoded = urldecode($identifier);
+                $searchTerm = str_replace('-', ' ', $decoded);
+
+
+                // Si no es numérico, buscar por tema/slug
+                $blog = Blog::with(['categoria', 'psicologo.users', 'metadata'])
+                ->where('slug', $decoded) // ← buscar primero por slug exacto
+                ->orWhere('tema', $searchTerm) // ← o tema igual
+                ->orWhere('tema', 'LIKE', '%' . $searchTerm . '%') // ← o tema parecido
+                ->first();
             }
 
             if (!$blog) {
@@ -136,6 +174,7 @@ class BlogController extends Controller
                 'idPsicologo' => $blog->idPsicologo,
                 'categoria' => $blog->categoria?->nombre,
                 'fecha' => $blog->fecha_publicado,
+
             ];
 
             return HttpResponseHelper::make()
@@ -162,6 +201,8 @@ class BlogController extends Controller
                     ->send();
             }
 
+
+
             $responseData = [
                 'idBlog' => $blog->idBlog,
                 'tema' => $blog->tema,
@@ -176,6 +217,7 @@ class BlogController extends Controller
                 'idPsicologo' => $blog->idPsicologo,
                 'categoria' =>  $blog->categoria->nombre,
                 'fecha' => $blog->fecha_publicado,
+
             ];
 
             return HttpResponseHelper::make()
@@ -186,6 +228,8 @@ class BlogController extends Controller
                 ->internalErrorResponse('Ocurrió un problema al obtener el blog: ' . $e->getMessage())
                 ->send();
         }
+
+
     }
 
     public function showAllAuthors(): JsonResponse
