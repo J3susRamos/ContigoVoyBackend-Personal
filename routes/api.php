@@ -25,7 +25,10 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Urls\UrlsController;
 use App\Http\Controllers\NotificationAdminController;
 use App\Http\Controllers\PersonalPermissionController; //<--Agregado M.
-use App\Http\Controllers\Idioma\IdiomaController; 
+use App\Http\Controllers\Idioma\IdiomaController;
+
+use App\Http\Controllers\GoogleCalendarController;
+
 
 // 🚀 RUTAS DE NOTIFICACIONES AUTOMÁTICAS
 Route::controller(NotificationAdminController::class)
@@ -94,13 +97,13 @@ Route::controller(PersonalController::class)
         ], function () {
             Route::post("/", "createPersonal");
             Route::get("/permisos/{user_id}", "getPersonalWithPermissions");
-            
+
             // Rutas para gestión de permisos AGREGADOS RECIEN M.
             Route::get("/permissions/by-email/{email}", "getPermissionsByEmail");
             Route::put("/permissions/update-by-email", "updatePermissionsByEmail");
 
 
-             // ✅ NUEVA RUTA PARA QUITAR PERMISOS 
+             // ✅ NUEVA RUTA PARA QUITAR PERMISOS
             Route::delete("/permissions/remove-by-email", "removePermissionsByEmail");
         });
     });
@@ -506,3 +509,8 @@ Route::controller(DisponibilidadController::class)
             },
         );
     });
+
+
+// ====== GOOGLE CALENDAR ======
+//Route::get("/calendar/test", [GoogleCalendarController::class, "test"]);
+//Route::get("/calendar/verificar", [GoogleCalendarController::class, "verificarConfiguracion"]);
