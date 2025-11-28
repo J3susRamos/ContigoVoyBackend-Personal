@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-
+use App\Models\BlogImages;
 class Blog extends Model
 {
     use HasFactory;
@@ -25,6 +25,11 @@ class Blog extends Model
         'imagenes',
         'idPsicologo',
         'fecha_publicado',
+        'blog_id',
+        'metaTitle',
+        'metaDescription',
+        'keywords',
+
     ];
 
     protected $casts = [
@@ -130,14 +135,14 @@ class Blog extends Model
         return $this->hasMany(Comentario::class, 'idBlog', 'id');
     }
 
-      public function metadata(): HasOne
+    public function metadata(): HasOne
     {
         return $this->hasOne(BlogMetadata::class, 'blog_id', 'idBlog');
     }
 
     public function images()
     {
-        return $this->hasMany(BlogImage::class, 'blog_id', 'idBlog');
+        return $this->hasMany(BlogImages::class, 'blog_id', 'idBlog');
     }
 
 }

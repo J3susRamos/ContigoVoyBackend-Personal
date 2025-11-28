@@ -283,7 +283,7 @@ class BlogController extends Controller
                     ->send();
             }
 
-            $blog = Blog::findOrFail($id);
+            $blog = Blog::with(['metadata', 'images'])->findOrFail($id);
 
             // Verificar que el blog pertenece al psicólogo actual
             if ($blog->idPsicologo !== $currentPsicologo->idPsicologo) {
@@ -292,17 +292,71 @@ class BlogController extends Controller
                     ->send();
             }
 
-            $blog->update($request->all());
+            \Log::info('Payload actualización de blog:', $request->all());
+
+            // ===============================
+            // 1) ACTUALIZAR SOLO CAMPOS DEL BLOG
+            // ===============================
+            $blog->update([
+                'idCategoria' => $request->input('idCategoria', $blog->idCategoria),
+                'tema' => $request->input('tema', $blog->tema),
+                'contenido' => $request->input('contenido', $blog->contenido),
+                'imagenes' => $request->input('imagenes', $blog->imagenes),
+                // 'idPsicologo' NO se toca aquí, se mantiene
+            ]);
+
+            // ===============================
+            // 2) ACTUALIZAR METADATA SEO
+            // ===============================
+            if ($request->hasAny(['metaTitle', 'metaDescription', 'keywords'])) {
+                $metadata = $blog->metadata;
+
+                if (!$metadata) {
+                    $metadata = new BlogMetadata();
+                    $metadata->blog_id = $blog->idBlog;
+                }
+
+                $metadata->metaTitle = $request->input('metaTitle');
+                $metadata->metaDescription = $request->input('metaDescription');
+                $metadata->keywords = $request->input('keywords');
+                $metadata->save();
+            }
+
+            // ===============================
+            // 3) ACTUALIZAR IMÁGENES RELACIONADAS
+            // ===============================
+            if ($request->has('imagenesMeta')) {
+                $imagenesMeta = $request->input('imagenesMeta', []);
+
+                // Borrar imágenes anteriores asociadas a este blog
+                BlogImages::where('blog_id', $blog->idBlog)->delete();
+
+                // Crear las nuevas
+                foreach ($imagenesMeta as $img) {
+                    BlogImages::create([
+                        'blog_id' => $blog->idBlog,
+                        'src' => $img['url'] ?? null,
+                        'title' => $img['title'] ?? null,
+                        'alt' => $img['altText'] ?? null,
+                    ]);
+                }
+            }
+
+            // Volvemos a cargar las relaciones actualizadas
+            $blog->load(['metadata', 'images']);
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog actualizado correctamente')
                 ->send();
+
         } catch (\Exception $e) {
+            \Log::error('Error al actualizar blog:', ['error' => $e->getMessage()]);
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al actualizar el blog: ' . $e->getMessage())
                 ->send();
         }
     }
+
 
     public function destroyBlog(int $id): JsonResponse
     {
