@@ -27,9 +27,11 @@ class PsicologosController extends Controller
      */
     private function normalizeName(?string $s): ?string
     {
-        if ($s === null) return null;
+        if ($s === null)
+            return null;
         $s = trim($s);
-        if ($s === '') return null;
+        if ($s === '')
+            return null;
         $s = mb_strtolower($s, 'UTF-8');
         return mb_convert_case($s, MB_CASE_TITLE, 'UTF-8');
     }
@@ -63,16 +65,17 @@ class PsicologosController extends Controller
                 $psicologo->especialidades()->attach($requestPsicologo->input('especialidades'));
             }
 
-           // createPsicologo
+            // createPsicologo
             if ($requestPsicologo->filled('idiomas') && is_array($requestPsicologo->input('idiomas'))) {
                 $ids = [];
                 foreach ($requestPsicologo->input('idiomas') as $val) {
                     $nom = $this->normalizeName($val);
-                    if (!$nom) continue;
+                    if (!$nom)
+                        continue;
                     $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
                     $ids[] = $idioma->idIdioma;
                 }
-                    if (!empty($ids)) {
+                if (!empty($ids)) {
                     $psicologo->idiomas()->sync($ids);
                 }
             }
@@ -203,7 +206,7 @@ class PsicologosController extends Controller
                 $search = $request->query("search");
                 $query->whereHas("users", function ($q) use ($search) {
                     $q->where("name", "like", "%{$search}%")
-                      ->orWhere("apellido", "like", "%{$search}%");
+                        ->orWhere("apellido", "like", "%{$search}%");
                 });
             }
 
@@ -413,7 +416,8 @@ class PsicologosController extends Controller
                 $especialidadesIds = [];
                 foreach ($especialidadesNombres as $nombre) {
                     $nombre = trim($nombre);
-                    if (empty($nombre)) continue;
+                    if (empty($nombre))
+                        continue;
                     $esp = Especialidad::firstOrCreate(['nombre' => $nombre]);
                     $especialidadesIds[] = $esp->idEspecialidad;
                 }
@@ -428,7 +432,8 @@ class PsicologosController extends Controller
                 $ids = [];
                 foreach ($entradas as $val) {
                     $nom = $this->normalizeName($val);
-                    if (!$nom) continue;
+                    if (!$nom)
+                        continue;
                     $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
                     $ids[] = $idioma->idIdioma;
                 }
@@ -454,21 +459,28 @@ class PsicologosController extends Controller
 
             // Usuario
             $usuarioData = [];
-            if ($request->filled('nombre'))   $usuarioData['name'] = $request->input('nombre');
-            if ($request->filled('apellido')) $usuarioData['apellido'] = $request->input('apellido');
-            if ($request->filled('imagen'))   $usuarioData['imagen'] = $request->input('imagen');
-            if ($request->filled('fecha_nacimiento')) $usuarioData['fecha_nacimiento'] = $request->input('fecha_nacimiento');
-            if (!empty($usuarioData)) $usuario->update($usuarioData);
+            if ($request->filled('nombre'))
+                $usuarioData['name'] = $request->input('nombre');
+            if ($request->filled('apellido'))
+                $usuarioData['apellido'] = $request->input('apellido');
+            if ($request->filled('imagen'))
+                $usuarioData['imagen'] = $request->input('imagen');
+            if ($request->filled('fecha_nacimiento'))
+                $usuarioData['fecha_nacimiento'] = $request->input('fecha_nacimiento');
+            if (!empty($usuarioData))
+                $usuario->update($usuarioData);
 
             // Psicólogo
             $psicologoData = [];
-            foreach (['titulo','introduccion','pais','genero','experiencia','horario', 'meet_link'] as $k) {
-                if ($request->filled($k)) $psicologoData[$k] = $request->input($k);
+            foreach (['titulo', 'introduccion', 'pais', 'genero', 'experiencia', 'horario', 'meet_link'] as $k) {
+                if ($request->filled($k))
+                    $psicologoData[$k] = $request->input($k);
             }
             // NO escribimos 'idioma' como string
             unset($psicologoData['idioma']);
 
-            if (!empty($psicologoData)) $psicologo->update($psicologoData);
+            if (!empty($psicologoData))
+                $psicologo->update($psicologoData);
 
             // Especialidades (array de nombres)
             if ($request->filled('especialidades')) {
@@ -476,7 +488,8 @@ class PsicologosController extends Controller
                 $especialidadesIds = [];
                 foreach ($especialidadesNombres as $nombre) {
                     $nombre = trim($nombre);
-                    if (empty($nombre)) continue;
+                    if (empty($nombre))
+                        continue;
                     $esp = Especialidad::firstOrCreate(['nombre' => $nombre]);
                     $especialidadesIds[] = $esp->idEspecialidad;
                 }
@@ -491,7 +504,8 @@ class PsicologosController extends Controller
                 $ids = [];
                 foreach ($entradas as $val) {
                     $nom = $this->normalizeName($val);
-                    if (!$nom) continue;
+                    if (!$nom)
+                        continue;
                     $idioma = Idioma::firstOrCreate(['nombre' => $nom]);
                     $ids[] = $idioma->idIdioma;
                 }
@@ -550,7 +564,7 @@ class PsicologosController extends Controller
                 return HttpResponseHelper::make()
                     ->successfulResponse(
                         'Estado del usuario del psicólogo cambiado correctamente a ' .
-                            ($psicologo->users->estado === 1 ? 'Activo' : 'Inactivo')
+                        ($psicologo->users->estado === 1 ? 'Activo' : 'Inactivo')
                     )
                     ->send();
             } else {
@@ -658,11 +672,11 @@ class PsicologosController extends Controller
     public function getIdiomasDisponibles(): JsonResponse
     {
         try {
-            $idiomas = Idioma::orderBy('nombre')->get(['idIdioma','nombre'])->pluck('nombre');
+            $idiomas = Idioma::orderBy('nombre')->get(['idIdioma', 'nombre'])->pluck('nombre');
 
             if ($idiomas->isEmpty()) {
                 // fallback opcional
-                $idiomas = collect(['Español','Inglés','Francés','Alemán','Portugués','Italiano']);
+                $idiomas = collect(['Español', 'Inglés', 'Francés', 'Alemán', 'Portugués', 'Italiano']);
             }
 
             return HttpResponseHelper::make()
@@ -683,19 +697,33 @@ class PsicologosController extends Controller
     public function getFilterOptions(): JsonResponse
     {
         try {
-            $activos = Psicologo::with(['idiomas', 'users' => function($q){ $q->where('estado',1);}])
-                ->whereHas('users', fn($q)=>$q->where('estado',1))
-                ->get(['idPsicologo','pais','genero','titulo']);
+            $activos = Psicologo::with([
+                'idiomas',
+                'users' => function ($q) {
+                    $q->where('estado', 1);
+                }
+            ])
+                ->whereHas('users', fn($q) => $q->where('estado', 1))
+                ->get(['idPsicologo', 'pais', 'genero', 'titulo']);
 
-            $paises  = $activos->pluck('pais')->filter()->unique()->values();
+            $paises = $activos->pluck('pais')->filter()->unique()->values();
             $generos = $activos->pluck('genero')->filter()->unique()->values();
 
-            $idiomas = $activos->flatMap(fn($p)=>$p->idiomas->pluck('nombre'))
+            $idiomas = $activos->flatMap(fn($p) => $p->idiomas->pluck('nombre'))
                 ->filter()
                 ->unique()
                 ->values();
 
-            $especialidades = Especialidad::query()->pluck('nombre')->filter()->unique()->values();
+            $especialidades = Especialidad::whereHas('psicologos', function ($q) {
+                $q->whereHas('users', function ($u) {
+                    $u->where('estado', 1); // solo psicólogos con user activo
+                });
+            })
+                ->orderBy('nombre')
+                ->pluck('nombre')
+                ->filter()
+                ->unique()
+                ->values();
 
             // Enfoques mediante mapeo a título y/o presencia como especialidad
             $mapeoEnfoques = [
@@ -717,13 +745,12 @@ class PsicologosController extends Controller
             }
 
             $result = [
-                'paises'         => $paises,
-                'generos'        => $generos,
-                'idiomas'        => $idiomas,       // nombres "Inglés", "Alemán", ...
-                'enfoques'       => array_values(array_unique($enfoques)),
+                'paises' => $paises,
+                'generos' => $generos,
+                'idiomas' => $idiomas,
+                'enfoques' => array_values(array_unique($enfoques)),
                 'especialidades' => $especialidades,
             ];
-
             return HttpResponseHelper::make()
                 ->successfulResponse('Opciones de filtros obtenidas correctamente', $result)
                 ->send();
