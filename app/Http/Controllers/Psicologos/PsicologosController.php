@@ -50,6 +50,9 @@ class PsicologosController extends Controller
             $psicologoData = $requestPsicologo->all();
             $psicologoData['user_id'] = $usuario_id;
 
+            //Link de Google Meet
+            $psicologoData['meet_link'] = $requestPsicologo->input('meet_link');
+
             // No guardamos 'idioma' como string: ahora usamos relación N:M
             unset($psicologoData['idioma']);
 
@@ -112,6 +115,7 @@ class PsicologosController extends Controller
                 'idiomas' => $psicologo->idiomas->pluck('nombre'),
                 'introduccion' => $psicologo->introduccion,
                 'experiencia' => $psicologo->experiencia,
+                'meet_link' => $psicologo->meet_link,
             ];
 
             return HttpResponseHelper::make()
@@ -382,7 +386,8 @@ class PsicologosController extends Controller
                 'pais',
                 'genero',
                 'experiencia',
-                'horario'
+                'horario',
+                'meet_link'
             ]);
 
             // No usamos 'idioma' string
@@ -457,7 +462,7 @@ class PsicologosController extends Controller
 
             // Psicólogo
             $psicologoData = [];
-            foreach (['titulo','introduccion','pais','genero','experiencia','horario'] as $k) {
+            foreach (['titulo','introduccion','pais','genero','experiencia','horario', 'meet_link'] as $k) {
                 if ($request->filled($k)) $psicologoData[$k] = $request->input($k);
             }
             // NO escribimos 'idioma' como string

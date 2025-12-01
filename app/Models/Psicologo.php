@@ -24,7 +24,8 @@ class Psicologo extends Model
         'genero',
         'experiencia',
         'horario',
-       
+        'meet_link'
+
     ];
 
     protected $casts = [
@@ -56,5 +57,5 @@ class Psicologo extends Model
     {
         return $this->belongsToMany(Idioma::class, 'idioma_detalle', 'idPsicologo', 'idIdioma');
     }
-    
+
 }
