@@ -31,6 +31,7 @@ class PostPsicologo extends FormRequest
             'horario' => 'required|array',
             'horario.*' => 'array',
             'horario.*.*' => 'array|size:2',
+            'meet_link' => 'required|url|max:100'
         ];
     }
 }

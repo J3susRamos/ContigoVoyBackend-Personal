@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -100,20 +101,22 @@
                 font-size: 20px;
             }
 
-            .content p, .info-box li {
+            .content p,
+            .info-box li {
                 font-size: 14px;
             }
         }
     </style>
 </head>
+
 <body>
-<div class="container">
+    <div class="container">
         <div class="header">
             <h1>¡Confirmación de tu primera cita!</h1>
         </div>
         <div class="content">
             <p>Hola <span class="highlight">{{ $datos['nombre'] ?? 'Paciente' }}</span>,</p>
-            <p>Nos alegra acompañarte en este proceso de crecimiento personasl. 🌱</p>
+            <p>Nos alegra acompañarte en este proceso de crecimiento personal. 🌱</p>
             <p>Gracias por confiar en <strong>Centro Psicológico Contigo Voy</strong>.</p>
             <p>A continuación encontrarás los detalles:</p>
 
@@ -122,6 +125,11 @@
                     <li><strong>📅 Fecha:</strong> {{ $datos['fecha'] ?? 'No disponible' }}</li>
                     <li><strong>🕒 Hora:</strong> {{ $datos['hora'] ?? 'No disponible' }}</li>
                     <li><strong>🧠 Psicólogo:</strong> {{ $datos['psicologo'] ?? 'No disponible' }}</li>
+                    @if(!empty($meet_link))
+                        <li><strong>💻 Enlace de Google Meet:</strong> <a href="{{ $meet_link }}"
+                                target="_blank">{{ $meet_link }}</a></li>
+                    @endif
+
                 </ul>
             </div>
 
@@ -136,4 +144,5 @@
         </div>
     </div>
 </body>
+
 </html>
