@@ -26,9 +26,6 @@ class Blog extends Model
         'idPsicologo',
         'fecha_publicado',
         'blog_id',
-        'metaTitle',
-        'metaDescription',
-        'keywords',
 
     ];
 
