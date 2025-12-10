@@ -20,6 +20,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NuevoPsicologoMail;
+
+
 class PsicologosController extends Controller
 {
     /**
@@ -81,6 +85,19 @@ class PsicologosController extends Controller
             }
 
             $usuario->assignRole('PSICOLOGO');
+
+            $nombreCompleto = $usuario->name . ' ' . $usuario->apellido;
+
+            // Preparar datos para el correo
+            $especialidadesString = $psicologo
+                ->especialidades
+                ->pluck('nombre')
+                ->join(', ');
+
+            $plainPassword = $requestUser['password'];
+
+            // Enviar correo al psicólogo
+            Mail::to($usuario->email)->send(new NuevoPsicologoMail($nombreCompleto, $especialidadesString, $usuario->email, $plainPassword));
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Psicólogo creado correctamente')
@@ -564,7 +581,7 @@ class PsicologosController extends Controller
                 return HttpResponseHelper::make()
                     ->successfulResponse(
                         'Estado del usuario del psicólogo cambiado correctamente a ' .
-                        ($psicologo->users->estado === 1 ? 'Activo' : 'Inactivo')
+                            ($psicologo->users->estado === 1 ? 'Activo' : 'Inactivo')
                     )
                     ->send();
             } else {
@@ -682,7 +699,6 @@ class PsicologosController extends Controller
             return HttpResponseHelper::make()
                 ->successfulResponse('Idiomas obtenidos correctamente', $idiomas->values())
                 ->send();
-
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al obtener idiomas: ' . $e->getMessage())
@@ -754,7 +770,6 @@ class PsicologosController extends Controller
             return HttpResponseHelper::make()
                 ->successfulResponse('Opciones de filtros obtenidas correctamente', $result)
                 ->send();
-
         } catch (\Exception $e) {
             return HttpResponseHelper::make()
                 ->internalErrorResponse('Error al obtener opciones de filtros: ' . $e->getMessage())
