@@ -25,11 +25,17 @@ class EnviarConfirmacionCitaWhatsApp implements ShouldQueue
 
     public function handle(WhatsAppService $whatsappService): void
     {
-        // Paciente
-        $nombre = $this->cita->prepaciente->nombre ?? $this->cita->paciente->nombre;
-        $phone = $this->cita->prepaciente->celular ?? $this->cita->paciente->celular;
+        // Nos aseguramos de tener relaciones cargadas
+        $this->cita->loadMissing(['paciente', 'prepaciente', 'psicologo.users']);
 
-        // Psicólogo
+        // ================= PACIENTE =================
+        $nombrePaciente = $this->cita->prepaciente->nombre
+            ?? $this->cita->paciente->nombre;
+
+        $phonePaciente = $this->cita->prepaciente->celular
+            ?? $this->cita->paciente->celular;
+
+        // PSICÓLOGO - nombre completo
         $nombrePsicologo = 'su psicólogo asignado';
         if ($this->cita->psicologo && $this->cita->psicologo->users) {
             $nombrePsicologo =
@@ -37,25 +43,54 @@ class EnviarConfirmacionCitaWhatsApp implements ShouldQueue
                 $this->cita->psicologo->users->apellido;
         }
 
-        // 👇 FORMATO QUE PIDE EL VALIDADOR DEL SERVICIO NODE
-        $fechaFormateada = Carbon::parse($this->cita->fecha_cita)->format('Y-m-d'); // YYYY-MM-DD
-        $horaFormateada = Carbon::parse($this->cita->hora_cita)->format('H:i');    // HH:MM
+        // Formatos requeridos
+        $fechaFormateada = Carbon::parse($this->cita->fecha_cita)->format('Y-m-d'); // para el validador Node
+        $horaFormateada = Carbon::parse($this->cita->hora_cita)->format('H:i');    // para el validador Node
+        $fechaMostrar = Carbon::parse($this->cita->fecha_cita)->format('d/m/Y'); // para mensajes de texto
 
+        // ===== 1) CONFIRMACIÓN AL PACIENTE (lo que ya tenías) =====
         try {
-            $whatsappService->sendConfirmationMessage(
-                $phone,
-                $nombrePsicologo,
-                $fechaFormateada,
-                $horaFormateada,
-                $nombre   // si ya añadiste el nombre como 5to parámetro
-            );
+            if ($phonePaciente) {
+                $whatsappService->sendConfirmationMessage(
+                    $phonePaciente,
+                    $nombrePsicologo,
+                    $fechaFormateada,
+                    $horaFormateada,
+                    $nombrePaciente   // nombre paciente como 5to parámetro
+                );
+            }
         } catch (\Throwable $th) {
-            Log::error('Error al enviar confirmación de cita por WhatsApp', [
+            Log::error('Error al enviar confirmación de cita por WhatsApp al paciente', [
                 'cita_id' => $this->cita->idCita ?? null,
-                'telefono' => $phone ?? null,
+                'telefono' => $phonePaciente ?? null,
+                'error' => $th->getMessage(),
+            ]);
+        }
+
+        // ===== 2) NUEVO: CONFIRMACIÓN AL PSICÓLOGO =====
+        try {
+            if ($this->cita->psicologo && $this->cita->psicologo->celular) {
+                $telefonoPsicologo = preg_replace(
+                    '/\s+/',
+                    '',
+                    $this->cita->psicologo->celular
+                );
+
+                $mensajePsicologo =
+                    "Hola {$nombrePsicologo}, se ha registrado una nueva cita.\n\n" .
+                    "👤 Paciente: {$nombrePaciente}\n" .
+                    "📅 Fecha: {$fechaMostrar}\n" .
+                    "⏰ Hora: {$horaFormateada}\n\n" .
+                    "Puedes revisar más detalles en tu panel de Contigo Voy.";
+
+                $whatsappService->sendTextMessage($telefonoPsicologo, $mensajePsicologo);
+            }
+        } catch (\Throwable $th) {
+            Log::error('Error al enviar confirmación de cita por WhatsApp al psicólogo', [
+                'cita_id' => $this->cita->idCita ?? null,
+                'telefono' => $this->cita->psicologo->celular ?? null,
                 'error' => $th->getMessage(),
             ]);
         }
     }
-
 }
