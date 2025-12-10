@@ -22,7 +22,7 @@ class PostPsicologo extends FormRequest
     public function rules(): array
     {
         return [
-            'titulo' =>'required|string|max:100',
+            'titulo' => 'required|string|max:100',
             'introduccion' => 'nullable|string|max:350',
             'pais' => 'required|string|max:100',
             'genero' => 'required|string|max:50',
@@ -31,7 +31,8 @@ class PostPsicologo extends FormRequest
             'horario' => 'required|array',
             'horario.*' => 'array',
             'horario.*.*' => 'array|size:2',
-            'meet_link' => 'required|url|max:100'
+            'meet_link' => 'required|url|max:100',
+            'celular' => 'nullable|string|min:9|max:20',
         ];
     }
 }

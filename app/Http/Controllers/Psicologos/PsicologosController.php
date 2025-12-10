@@ -119,6 +119,7 @@ class PsicologosController extends Controller
                 'introduccion' => $psicologo->introduccion,
                 'experiencia' => $psicologo->experiencia,
                 'meet_link' => $psicologo->meet_link,
+                'celular' => $psicologo->celular,
             ];
 
             return HttpResponseHelper::make()
@@ -374,6 +375,7 @@ class PsicologosController extends Controller
             'horario' => $psicologo->horario,
             'correo' => $psicologo->users->email,
             'imagen' => $psicologo->users->imagen,
+            'celular' => $psicologo->celular,
         ];
     }
 
@@ -390,7 +392,8 @@ class PsicologosController extends Controller
                 'genero',
                 'experiencia',
                 'horario',
-                'meet_link'
+                'meet_link',
+                'celular',
             ]);
 
             // No usamos 'idioma' string
@@ -472,7 +475,7 @@ class PsicologosController extends Controller
 
             // Psicólogo
             $psicologoData = [];
-            foreach (['titulo', 'introduccion', 'pais', 'genero', 'experiencia', 'horario', 'meet_link'] as $k) {
+            foreach (['titulo', 'introduccion', 'pais', 'genero', 'experiencia', 'horario', 'meet_link', 'celular'] as $k) {
                 if ($request->filled($k))
                     $psicologoData[$k] = $request->input($k);
             }

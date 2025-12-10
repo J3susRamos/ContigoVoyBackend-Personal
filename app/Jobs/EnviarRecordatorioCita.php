@@ -12,9 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-
-use App\Services\GoogleCalendarService;
-
+use App\Services\GoogleCalendarService; // (comentado en el cuerpo, pero lo dejamos por si luego lo usas)
 
 class EnviarRecordatorioCita implements ShouldQueue
 {
@@ -22,7 +20,6 @@ class EnviarRecordatorioCita implements ShouldQueue
 
     public Cita $cita;
     public WhatsAppService $whatsappService;
-
 
     public function __construct(Cita $cita)
     {
@@ -32,6 +29,9 @@ class EnviarRecordatorioCita implements ShouldQueue
     public function handle(WhatsAppService $whatsappService)
     {
         $this->whatsappService = $whatsappService;
+
+        // Aseguramos relaciones
+        $this->cita->loadMissing(['paciente', 'prepaciente', 'psicologo.users']);
 
         $nombre = $this->cita->prepaciente->nombre ?? $this->cita->paciente->nombre;
         $email = $this->cita->prepaciente->correo ?? $this->cita->paciente->correo;
@@ -43,47 +43,68 @@ class EnviarRecordatorioCita implements ShouldQueue
 
         /*
         // Crear evento en Google Calendar y generar enlace de Google Meet primero
-        $meetLink = null;
-        try {
-            $event = $calendar->createEvent('primary', [
-                'summary' => "Cita con $nombre",
-                'description' => "Cita con el psicólogo asignado",
-                'start' => "{$fecha}T{$hora}:00",
-                'end' => "{$fecha}T" . date('H:i', strtotime("$hora +1 hour")) . ":00",
-            ]);
+        // (lo tienes comentado, lo dejo igual)
+        */
 
-            // Obtener el enlace de Google Meet del evento
-            if ($event->getHangoutLink()) {
-                $meetLink = $event->getHangoutLink();
-            } elseif ($event->getConferenceData() && $event->getConferenceData()->getEntryPoints()) {
-                $entryPoints = $event->getConferenceData()->getEntryPoints();
-                if (!empty($entryPoints) && isset($entryPoints[0])) {
-                    $meetLink = $entryPoints[0]->getUri();
-                }
-            }
-
-            Log::info("Enlace de Google Meet generado: " . ($meetLink ?? 'No disponible'));
-        } catch (\Throwable $th) {
-            Log::error('Error creando evento en Google Calendar: ' . $th->getMessage());
-        }
-*/
-         //Enviar correo con el enlace de Meet
+        // ========== 1) CORREO + WHATSAPP AL PACIENTE (ya existente) ==========
         try {
             Mail::to($email)->send(new CitaReminderMail($nombre, $fecha, $hora, $meet_link));
         } catch (\Throwable $th) {
-            Log::error($th->getMessage());
+            Log::error('Error al enviar correo de recordatorio de cita', [
+                'cita_id' => $this->cita->idCita ?? null,
+                'email' => $email ?? null,
+                'error' => $th->getMessage(),
+            ]);
         }
 
-        // Enviar WhatsApp
         $message = "Hola $nombre, recuerda tu cita:\nFecha: $fecha\nHora: $hora";
         if ($meet_link) {
             $message .= "\n\nEnlace de Google Meet: $meet_link";
         }
 
         try {
-            $this->whatsappService->sendTextMessage($phone, $message);
+            if ($phone) {
+                $this->whatsappService->sendTextMessage($phone, $message);
+            }
         } catch (\Throwable $th) {
-            Log::error($th->getMessage());
+            Log::error('Error al enviar recordatorio de cita por WhatsApp al paciente', [
+                'cita_id' => $this->cita->idCita ?? null,
+                'telefono' => $phone ?? null,
+                'error' => $th->getMessage(),
+            ]);
+        }
+
+        // ========== 2) NUEVO: RECORDATORIO AL PSICÓLOGO ==========
+        try {
+            if ($this->cita->psicologo && $this->cita->psicologo->celular) {
+                $telefonoPsicologo = preg_replace(
+                    '/\s+/',
+                    '',
+                    $this->cita->psicologo->celular
+                );
+
+                $nombrePsicologo = $this->cita->psicologo->users
+                    ? $this->cita->psicologo->users->name . ' ' . $this->cita->psicologo->users->apellido
+                    : 'Psicólogo/a';
+
+                $mensajePsicologo =
+                    "Hola {$nombrePsicologo}, este es un recordatorio de tu cita:\n\n" .
+                    "👤 Paciente: {$nombre}\n" .
+                    "📅 Fecha: {$fecha}\n" .
+                    "⏰ Hora: {$hora}";
+
+                if ($meet_link) {
+                    $mensajePsicologo .= "\n\nEnlace de Google Meet: {$meet_link}";
+                }
+
+                $this->whatsappService->sendTextMessage($telefonoPsicologo, $mensajePsicologo);
+            }
+        } catch (\Throwable $th) {
+            Log::error('Error al enviar recordatorio de cita por WhatsApp al psicólogo', [
+                'cita_id' => $this->cita->idCita ?? null,
+                'telefono' => $this->cita->psicologo->celular ?? null,
+                'error' => $th->getMessage(),
+            ]);
         }
     }
 }
