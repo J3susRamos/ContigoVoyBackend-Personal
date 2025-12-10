@@ -24,8 +24,8 @@ class Psicologo extends Model
         'genero',
         'experiencia',
         'horario',
-        'meet_link'
-
+        'meet_link',
+        'celular'
     ];
 
     protected $casts = [
