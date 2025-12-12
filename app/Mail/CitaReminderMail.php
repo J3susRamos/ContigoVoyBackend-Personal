@@ -13,26 +13,26 @@ class CitaReminderMail extends Mailable
     public $nombre;
     public $fecha;
     public $hora;
-    public $meet_link;
+    public $jitsi_url;
 
-    public function __construct($nombre, $fecha, $hora, $meet_link = null)
+    public function __construct($nombre, $fecha, $hora, $jitsi_url = null)
     {
         $this->nombre = $nombre;
         $this->fecha = $fecha;
         $this->hora = $hora;
-        $this->meet_link = $meet_link;
+        $this->jitsi_url = $jitsi_url;
     }
 
     public function build()
     {
         return $this
             ->subject("Recordatorio de tu cita")
-            ->view('emails.cita_reminder_plain') // texto plano
+            ->view('emails.cita_reminder_plain')
             ->with([
                 'nombre' => $this->nombre,
                 'fecha' => $this->fecha,
                 'hora' => $this->hora,
-                'meet_link' => $this->meet_link,
+                'jitsi_url' => $this->jitsi_url,
             ]);
     }
 }

@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-         Schema::table('pre_pacientes', function (Blueprint $table) {
-        $table->dropUnique(['correo']); 
-    });
+        Schema::table('psicologos', function (Blueprint $table) {
+            $table->dropColumn('meet_link');
+        });
     }
 
     /**
@@ -21,9 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        
-    Schema::table('pre_pacientes', function (Blueprint $table) {
-        $table->unique('correo'); 
-    });
+        Schema::table('psicologos', function (Blueprint $table) {
+            $table->string('meet_link')->nullable();
+        });
     }
 };

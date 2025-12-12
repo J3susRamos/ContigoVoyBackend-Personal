@@ -12,9 +12,9 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
-class EnviarConfirmacionCitaWhatsApp implements ShouldQueue
+class EnviarConfirmacionCitaWhatsApp
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
 
     public Cita $cita;
 
