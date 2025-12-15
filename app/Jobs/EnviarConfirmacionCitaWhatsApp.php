@@ -4,11 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Cita;
 use App\Services\WhatsAppService;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -43,21 +39,44 @@ class EnviarConfirmacionCitaWhatsApp
                 $this->cita->psicologo->users->apellido;
         }
 
+        // ✅ JITSI URL (viene de la cita)
+        $jitsi_url = $this->cita->jitsi_url ?? null;
+
         // Formatos requeridos
         $fechaFormateada = Carbon::parse($this->cita->fecha_cita)->format('Y-m-d'); // para el validador Node
         $horaFormateada = Carbon::parse($this->cita->hora_cita)->format('H:i');    // para el validador Node
-        $fechaMostrar = Carbon::parse($this->cita->fecha_cita)->format('d/m/Y'); // para mensajes de texto
+        $fechaMostrar = Carbon::parse($this->cita->fecha_cita)->format('d/m/Y'); // para mensajes
 
-        // ===== 1) CONFIRMACIÓN AL PACIENTE (lo que ya tenías) =====
+        // ===== 1) CONFIRMACIÓN AL PACIENTE =====
         try {
             if ($phonePaciente) {
+
+                // Si tu método soporta el link como parámetro, úsalo:
+                // $whatsappService->sendConfirmationMessage(
+                //     $phonePaciente,
+                //     $nombrePsicologo,
+                //     $fechaFormateada,
+                //     $horaFormateada,
+                //     $nombrePaciente,
+                //     $jitsi_url
+                // );
+
+                // ✅ Si NO soporta link (lo más probable), manda un texto adicional:
                 $whatsappService->sendConfirmationMessage(
                     $phonePaciente,
                     $nombrePsicologo,
                     $fechaFormateada,
                     $horaFormateada,
-                    $nombrePaciente   // nombre paciente como 5to parámetro
+                    $nombrePaciente
                 );
+
+                if ($jitsi_url) {
+                    $mensajeLinkPaciente =
+                        "✅ Tu cita está confirmada.\n\n" .
+                        "Ingresa a la reunion: {$jitsi_url}\n\n" .
+                        "Nos vemos pronto 💜";
+                    $whatsappService->sendTextMessage($phonePaciente, $mensajeLinkPaciente);
+                }
             }
         } catch (\Throwable $th) {
             Log::error('Error al enviar confirmación de cita por WhatsApp al paciente', [
@@ -67,21 +86,24 @@ class EnviarConfirmacionCitaWhatsApp
             ]);
         }
 
-        // ===== 2) NUEVO: CONFIRMACIÓN AL PSICÓLOGO =====
+        // ===== 2) CONFIRMACIÓN AL PSICÓLOGO =====
         try {
             if ($this->cita->psicologo && $this->cita->psicologo->celular) {
-                $telefonoPsicologo = preg_replace(
-                    '/\s+/',
-                    '',
-                    $this->cita->psicologo->celular
-                );
+                $telefonoPsicologo = preg_replace('/\s+/', '', $this->cita->psicologo->celular);
 
                 $mensajePsicologo =
                     "Hola {$nombrePsicologo}, se ha registrado una nueva cita.\n\n" .
                     "👤 Paciente: {$nombrePaciente}\n" .
                     "📅 Fecha: {$fechaMostrar}\n" .
-                    "⏰ Hora: {$horaFormateada}\n\n" .
-                    "Puedes revisar más detalles en tu panel de Contigo Voy.";
+                    "⏰ Hora: {$horaFormateada}\n";
+
+                // ✅ Agregar link si existe
+                if ($jitsi_url) {
+                    $mensajePsicologo .= "\nIngresa a la reunion: {$jitsi_url}\n";
+                }
+
+                $mensajePsicologo .=
+                    "\nPuedes revisar más detalles en tu panel de Contigo Voy.";
 
                 $whatsappService->sendTextMessage($telefonoPsicologo, $mensajePsicologo);
             }
