@@ -3,27 +3,30 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
-class ConfirmacionPrePaciente extends Mailable
+class NuevoPsicologoMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public array $datos;
-    public $jitsi_url;
+    public $nombreCompleto;
+    public $especialidades;
+    public $usuario;
+    public $password;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(array $datos, $jitsi_url = null)
+    public function __construct($nombreCompleto, $especialidades, $usuario, $password)
     {
-        $this->datos = $datos;
-        $this->jitsi_url = $jitsi_url;
+        $this->nombreCompleto = $nombreCompleto;
+        $this->especialidades = $especialidades;
+        $this->usuario = $usuario;
+        $this->password = $password;
     }
 
     /**
@@ -32,7 +35,7 @@ class ConfirmacionPrePaciente extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🌿¡Gracias por dar este paso hacia tu bienestar! 💜',
+            subject: 'Bienvenido Psicologo',
         );
     }
 
@@ -42,18 +45,14 @@ class ConfirmacionPrePaciente extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.confirmacion_pre_paciente',
-            with: [
-                'datos' => $this->datos,
-                'jitsi_url' => $this->jitsi_url,
-            ]
+            view: 'emails.nuevo_psicologo',
         );
     }
 
     /**
      * Get the attachments for the message.
      *
-     * @return array<int, Attachment>
+     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
      */
     public function attachments(): array
     {

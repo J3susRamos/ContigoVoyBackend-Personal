@@ -39,16 +39,10 @@ class EnviarRecordatorioCita implements ShouldQueue
 
         $fecha = $this->cita->fecha_cita;
         $hora = $this->cita->hora_cita;
-        $meet_link = $this->cita->psicologo->meet_link ?? null;
 
-        /*
-        // Crear evento en Google Calendar y generar enlace de Google Meet primero
-        // (lo tienes comentado, lo dejo igual)
-        */
-
-        // ========== 1) CORREO + WHATSAPP AL PACIENTE (ya existente) ==========
+        //Enviar correo con el enlace
         try {
-            Mail::to($email)->send(new CitaReminderMail($nombre, $fecha, $hora, $meet_link));
+            Mail::to($email)->send(new CitaReminderMail($nombre, $fecha, $hora, $this->cita->jitsi_url));
         } catch (\Throwable $th) {
             Log::error('Error al enviar correo de recordatorio de cita', [
                 'cita_id' => $this->cita->idCita ?? null,
@@ -58,9 +52,23 @@ class EnviarRecordatorioCita implements ShouldQueue
         }
 
         $message = "Hola $nombre, recuerda tu cita:\nFecha: $fecha\nHora: $hora";
-        if ($meet_link) {
-            $message .= "\n\nEnlace de Google Meet: $meet_link";
+
+
+        try {
+            if ($phone) {
+                $this->whatsappService->sendTextMessage($phone, $message);
+            }
+        } catch (\Throwable $th) {
+            Log::error('Error al enviar recordatorio de cita por WhatsApp al paciente', [
+                'cita_id' => $this->cita->idCita ?? null,
+                'telefono' => $phone ?? null,
+                'error' => $th->getMessage(),
+            ]);
         }
+
+        // Enviar WhatsApp
+        $message = "Hola $nombre, recuerda tu cita:\nFecha: $fecha\nHora: $hora";
+
 
         try {
             if ($phone) {
@@ -93,9 +101,7 @@ class EnviarRecordatorioCita implements ShouldQueue
                     "📅 Fecha: {$fecha}\n" .
                     "⏰ Hora: {$hora}";
 
-                if ($meet_link) {
-                    $mensajePsicologo .= "\n\nEnlace de Google Meet: {$meet_link}";
-                }
+
 
                 $this->whatsappService->sendTextMessage($telefonoPsicologo, $mensajePsicologo);
             }
