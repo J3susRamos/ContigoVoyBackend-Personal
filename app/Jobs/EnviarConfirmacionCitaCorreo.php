@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Cita;
 use App\Mail\ConfirmacionPrePaciente;
+use App\Mail\CitaPsicologo;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,9 +14,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
-class EnviarConfirmacionCitaCorreo implements ShouldQueue
+class EnviarConfirmacionCitaCorreo
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
 
     public Cita $cita;
 
@@ -32,7 +33,11 @@ class EnviarConfirmacionCitaCorreo implements ShouldQueue
      */
     public function handle(): void
     {
+        Log::info('Iniciando EnviarConfirmacionCitaCorreo', ['cita_id' => $this->cita->idCita]);
         try {
+            // Cargar relaciones necesarias
+            $this->cita->load('psicologo.users', 'prepaciente', 'paciente');
+
             // Obtener paciente (prepaciente o paciente normal)
             $paciente = $this->cita->prepaciente ?? $this->cita->paciente;
 
@@ -63,18 +68,35 @@ class EnviarConfirmacionCitaCorreo implements ShouldQueue
                     'fecha' => $fecha,
                     'hora' => $hora,
                     'psicologo' => $nombrePsicologo,
-                ])
+                ], $this->cita->jitsi_url)
             );
 
-            // Correo al paciente
-            Mail::to($paciente->correo)->send(
-                new ConfirmacionPrePaciente([
-                    'nombre' => $nombre,
-                    'fecha' => $fecha,
-                    'hora' => $hora,
-                    'psicologo' => $nombrePsicologo,
-                ])
-            );
+            // Correo al psicólogo
+            $correoPsicologo = null;
+            if ($this->cita->psicologo && $this->cita->psicologo->users) {
+                $correoPsicologo = $this->cita->psicologo->users->email;
+            }
+            Log::info('Intentando enviar correo al psicólogo', [
+                'cita_id' => $this->cita->idCita,
+                'correoPsicologo' => $correoPsicologo,
+                'psicologo_id' => $this->cita->psicologo ? $this->cita->psicologo->idPsicologo : null,
+                'users_id' => $this->cita->psicologo && $this->cita->psicologo->users ? $this->cita->psicologo->users->id : null,
+            ]);
+            if ($correoPsicologo) {
+                Mail::to($correoPsicologo)->send(
+                    new CitaPsicologo([
+                        'nombrePaciente' => $paciente->nombre,
+                        'correoPaciente' => $paciente->correo,
+                        'celularPaciente' => $paciente->celular,
+                        'fecha' => $fecha,
+                        'hora' => $hora,
+                        'psicologo' => $nombrePsicologo,
+                    ], $this->cita->jitsi_url)
+                );
+                Log::info('Correo enviado al psicólogo correctamente', ['cita_id' => $this->cita->idCita]);
+            } else {
+                Log::warning('No se pudo enviar correo al psicólogo: email no encontrado', ['cita_id' => $this->cita->idCita]);
+            }
 
         } catch (\Exception $e) {
             Log::error('Error enviando confirmación de cita por correo', [
