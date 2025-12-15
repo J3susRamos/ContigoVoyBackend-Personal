@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('pre_pacientes', function (Blueprint $table) {
             $table->increments('idPrePaciente');
             $table->string('nombre', 150);
-            $table->string('correo')->unique();
+            $table->string('correo');
             $table->string('celular', 30);
             $table->string('estado')->default('pendiente');
             $table->unsignedInteger('idPsicologo');

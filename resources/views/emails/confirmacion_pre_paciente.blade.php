@@ -125,9 +125,9 @@
                     <li><strong>📅 Fecha:</strong> {{ $datos['fecha'] ?? 'No disponible' }}</li>
                     <li><strong>🕒 Hora:</strong> {{ $datos['hora'] ?? 'No disponible' }}</li>
                     <li><strong>🧠 Psicólogo:</strong> {{ $datos['psicologo'] ?? 'No disponible' }}</li>
-                    @if(!empty($meet_link))
-                        <li><strong>💻 Enlace de Google Meet:</strong> <a href="{{ $meet_link }}"
-                                target="_blank">{{ $meet_link }}</a></li>
+                    @if(!empty($jitsi_url))
+                        <li><strong>💻 Enlace de Cita:</strong> <a href="{{ $jitsi_url }}"
+                                target="_blank">{{ $jitsi_url }}</a></li>
                     @endif
 
                 </ul>

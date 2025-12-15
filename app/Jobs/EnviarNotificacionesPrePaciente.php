@@ -13,27 +13,28 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Services\GoogleCalendarService;
+use App\Models\Cita;
 use Carbon\Carbon;
 
-class EnviarNotificacionesPrePaciente implements ShouldQueue
+class EnviarNotificacionesPrePaciente
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
 
     public $prePaciente;
     public $datos;
     public $fecha;
     public $hora;
     public $nombrePsicologo;
-    public $meet_link;
+    public $idCita;
 
-    public function __construct($prePaciente, $datos, $fecha, $hora, $nombrePsicologo, $meet_link = null)
+    public function __construct($prePaciente, $datos, $fecha, $hora, $nombrePsicologo, $idCita = null)
     {
         $this->prePaciente = $prePaciente;
         $this->datos = $datos;
         $this->fecha = $fecha;
         $this->hora = $hora;
         $this->nombrePsicologo = $nombrePsicologo;
-        $this->meet_link = $datos['meet_link'] ?? $meet_link ?? null;
+        $this->idCita = $idCita;
     }
 
     public function handle(): void
@@ -42,19 +43,20 @@ class EnviarNotificacionesPrePaciente implements ShouldQueue
 
             Log::info('=== INICIO: EnviarNotificacionesPrePaciente ===');
 
+            // Obtener el jitsi_url desde la base de datos usando la cita
+            $jitsi_url = null;
+            if ($this->idCita) {
+                $cita = Cita::find($this->idCita);
+                $jitsi_url = $cita ? $cita->jitsi_url : null;
+
+            }
+
             // Enviar correos
             $adminEmail = config('emails.admin_address', 'contigovoyproject@gmail.com');
-            Log::info("Enviando correo al admin: $adminEmail");
-
-
-            Log::info('Datos enviados al Mailable:', $this->datos);
 
             Mail::to($adminEmail)->send(new PrePacienteCreado($this->datos));
-            Log::info("Correo enviado al admin correctamente");
-
 
             $correoPaciente = $this->prePaciente->correo;
-            Log::info("Enviando correo al paciente: $correoPaciente");
 
             Mail::to($this->prePaciente->correo)->send(
                 new ConfirmacionPrePaciente([
@@ -62,8 +64,7 @@ class EnviarNotificacionesPrePaciente implements ShouldQueue
                     'fecha' => $this->fecha,
                     'hora' => $this->hora,
                     'psicologo' => $this->nombrePsicologo,
-                    'meet_link' => $this->meet_link,
-                ])
+                ], $jitsi_url)
             );
 
             Log::info("Correo enviado al paciente correctamente");
@@ -71,30 +72,24 @@ class EnviarNotificacionesPrePaciente implements ShouldQueue
             // WhatsApp
             $mensaje = "👋 ¡Hola {$this->prePaciente->nombre}!
 
-Tu consulta **GRATIS** está lista 💜  
+Tu consulta **GRATIS** está lista 💜
 Nos vemos el {$this->fecha} a las {$this->hora}.
 
-Ingresa al Meet aquí:  
-💻 {$this->meet_link}
+Ingresa a la reunion: {$jitsi_url}
 
 Cualquier duda, escríbenos 😊";
 
+            if ($this->prePaciente->celular) {
+                $whatsappService = new WhatsAppService();
+                $whatsappService->sendTextMessage($this->prePaciente->celular, $mensaje);
+                Log::info("WhatsApp enviado correctamente a: {$this->prePaciente->celular}");
+            }
 
-            $whatsappService = app(WhatsAppService::class);
-            $whatsappService->sendTextMessage($this->prePaciente->celular, $mensaje);
-
-            Log::info('Datos recibidos por el Job', [
-                'meet_link' => $this->meet_link,
-                'datos_meet_link' => $this->datos['meet_link'] ?? 'NO EXISTE',
-            ]);
         } catch (\Exception $e) {
             Log::error('❌❌❌ ERROR GENERAL en envío de notificaciones: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
             Log::error('=== FIN: EnviarNotificacionesPrePaciente (ERROR) ===');
         }
 
-
-
-        Log::info('--- Fin del Job EnviarNotificacionesPrePaciente ---');
     }
 }

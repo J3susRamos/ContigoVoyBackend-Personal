@@ -31,7 +31,7 @@ class PutPsicologo extends FormRequest
             'horario' => 'sometimes|array',
             'horario.*' => 'array',
             'horario.*.*' => 'array|size:2',
-            'meet_link' => 'sometimes|url|max:100',
+
             'celular' => 'sometimes|nullable|string|min:9|max:20',
         ];
     }

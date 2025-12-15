@@ -47,14 +47,18 @@ class PrePacienteController extends Controller
             $citaData = array_merge($citaValidated, [
                 "motivo_Consulta" => "Primera cita gratis",
                 "idPrePaciente" => $id,
+                "jitsi_url" => "https://meet.jit.si/consulta_" . uniqid(),
+                "fecha_limite" => Carbon::parse($request->fecha_cita)->subDays(1)->format('Y-m-d'),
             ]);
 
             $cita = Cita::create($citaData);
+            $cita->refresh(); // Recargar desde BD para asegurar que jitsi_url esté presente
 
             $horaRecordatorio = Carbon::parse($cita->fecha_cita . ' ' . $cita->hora_cita)
                 ->subHours(3);
             EnviarConfirmacionCitaWhatsApp::dispatch($cita);
             EnviarConfirmacionCitaCorreo::dispatch($cita);
+            Log::info('Jobs dispatched: WhatsApp y Correo para cita', ['cita_id' => $cita->idCita]);
             EnviarRecordatorioCita::dispatch($cita)->delay($horaRecordatorio);
 
             // Cargamos la relación con el psicólogo
@@ -76,7 +80,6 @@ class PrePacienteController extends Controller
                 ? $prePaciente->psicologo->users->name . " " . $prePaciente->psicologo->users->apellido
                 : "tu psicólogo asignado";
 
-            $meet_link = $prePaciente->psicologo->meet_link ?? null;
 
             EnviarNotificacionesPrePaciente::dispatch(
                 $prePaciente,
@@ -84,8 +87,13 @@ class PrePacienteController extends Controller
                 $request->input("fecha_cita"),
                 $request->input("hora_cita"),
                 $nombrePsicologo,
-                $meet_link
+                $cita->idCita,
             );
+
+            \Illuminate\Support\Facades\Log::info('Cita creada con jitsi_url:', [
+                'idCita' => $cita->idCita,
+                'jitsi_url' => $cita->jitsi_url,
+            ]);
 
             return HttpResponseHelper::make()
                 ->successfulResponse(
