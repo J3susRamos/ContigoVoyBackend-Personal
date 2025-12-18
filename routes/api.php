@@ -53,11 +53,11 @@ Route::controller(UserController::class)
         Route::group(
             ["middleware" => ["auth:sanctum", "role:ADMIN"]],
             function () {
-                Route::get("/workers", "getAllWorkers");
-                Route::post("/change-role", "changeUserRole");
-                Route::post("/toggle-status", "toggleUserStatus");
-                Route::get("/workers/stats", "getWorkersStats");
-            },
+            Route::get("/workers", "getAllWorkers");
+            Route::post("/change-role", "changeUserRole");
+            Route::post("/toggle-status", "toggleUserStatus");
+            Route::get("/workers/stats", "getWorkersStats");
+        },
         );
     });
 
@@ -103,7 +103,7 @@ Route::controller(PersonalController::class)
             Route::put("/permissions/update-by-email", "updatePermissionsByEmail");
 
 
-             // ✅ NUEVA RUTA PARA QUITAR PERMISOS
+            // ✅ NUEVA RUTA PARA QUITAR PERMISOS
             Route::delete("/permissions/remove-by-email", "removePermissionsByEmail");
         });
     });
@@ -186,17 +186,18 @@ Route::controller(PsicologosController::class)
             },
         );
 
-        Route::put("/update/{id}", "actualizarPsicologo");
-        Route::get("/especialidades/{id}", "obtenerEspecialidades");
+        Route::put("/update/{id}", "actualizarPsicologo")->whereNumber("id");
+        Route::get("/especialidades/{id}", "obtenerEspecialidades")->whereNumber("id");
+
 
         // ===== Opciones dinámicas de filtros (tres alias) =====
         Route::get("/filters", "getFilterOptions");          // ya existía
         Route::get("/filter-options", "getFilterOptions");   // alias para el front
         Route::get("/getFilterOptions", "getFilterOptions"); // alias para el front
         // ======================================================
-
+    
         Route::get("/", "showAllPsicologos");
-        Route::get("/{id}", "showById"); // mantener al final para no capturar los alias
+        Route::get("/{id}", "showById")->whereNumber("id"); // mantener al final para no capturar los alias
     });
 
 Route::controller(BlogController::class)
@@ -210,7 +211,7 @@ Route::controller(BlogController::class)
         Route::get("/tema/{tema}", "showbyIdBlog"); // Nueva ruta específica para búsqueda por tema
         // Ruta general al final
         Route::get("/{identifier}", "showbyIdBlog"); // Acepta tanto ID como slug
-
+    
         Route::group(
             [
                 "middleware" => [
@@ -263,11 +264,11 @@ Route::controller(EspecialidadController::class)
             },
         );
     });
-    Route::controller(IdiomaController::class)
+Route::controller(IdiomaController::class)
     ->prefix('idiomas')
     ->group(function () {
         Route::get('/', 'index');
-        Route::group(['middleware' => ['auth:sanctum','role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION']], function () {
+        Route::group(['middleware' => ['auth:sanctum', 'role:ADMIN|ADMINISTRADOR|MARKETING|COMUNICACION']], function () {
             Route::post('/', 'store');
             Route::put('/{id}', 'update');
             Route::delete('/{id}', 'destroy');
