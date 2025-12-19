@@ -85,6 +85,13 @@ class BlogController extends Controller
                     'contenido' => Str::limit($blog->contenido, 150),
                     'imagenes' => $blog->imagenes, // Array de imágenes
                     'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
+                    'imagenesMeta' => $blog->images->map(function ($img) {
+                        return [
+                            'url' => $img->src,
+                            'title' => $img->title,
+                            'altText' => $img->alt,
+                        ];
+                    }),
                     'nombrePsicologo' => $blog->psicologo->users->name . ' ' . $blog->psicologo->users->apellido,
                     'psicologoImagenId' => $blog->psicologo->users->imagen,
                     'categoria' => $blog->categoria?->nombre,
@@ -117,6 +124,13 @@ class BlogController extends Controller
                 'slug' => $blog->slug,
                 'contenido' => $blog->contenido,
                 'imagenes' => $blog->imagenes, // Array de imágenes
+                'imagenesMeta' => $blog->images->map(function ($img) {
+                    return [
+                        'url' => $img->src,
+                        'title' => $img->title,
+                        'altText' => $img->alt,
+                    ];
+                }),
                 'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                 'psicologo' => $blog->psicologo?->users?->name,
                 'psicologApellido' => $blog->psicologo?->users?->apellido,
@@ -174,6 +188,14 @@ class BlogController extends Controller
                 'idPsicologo' => $blog->idPsicologo,
                 'categoria' => $blog->categoria?->nombre,
                 'fecha' => $blog->fecha_publicado,
+                'imagenesMeta' => $blog->images->map(function ($img) {
+                    return [
+                        'id' => $img->id,
+                        'url' => $img->src,
+                        'title' => $img->title,
+                        'altText' => $img->alt,
+                    ];
+                }),
 
             ];
 
@@ -421,6 +443,13 @@ class BlogController extends Controller
                         'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                         'categoria' => $blog->categoria->nombre,
                         'idPsicologo' => $blog->idPsicologo,
+                        'imagenesMeta' => $blog->images->map(function ($img) {
+                            return [
+                                'url' => $img->src,
+                                'title' => $img->title,
+                                'altText' => $img->alt,
+                            ];
+                        }),
                     ];
                 });
 
