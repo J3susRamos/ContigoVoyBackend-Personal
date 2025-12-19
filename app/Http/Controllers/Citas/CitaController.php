@@ -77,6 +77,19 @@ class CitaController extends Controller
             $jitsiUrl = "https://meet.jit.si/consulta_" . uniqid();
             $data['jitsi_url'] = $jitsiUrl;
 
+            // Mapeo de enfoques
+            $mapeoEnfoques = [
+                'niños' => 'Pediatra',
+                'adolescentes' => 'Pedagogo',
+                'familiar' => 'Psicoanalista',
+                'pareja' => 'Terapeuta',
+                'adulto' => 'Conductual'
+            ];
+
+            $tipoConsulta = $request->input('tipo_consulta'); // ej: 'niños', 'pareja', etc.
+            $tituloPsicologo = $mapeoEnfoques[$tipoConsulta] ?? $psicologo->titulo ?? 'General';
+            $data['titulo_psicologo'] = $tituloPsicologo; // Guardarlo en la cita
+
             // Crear la cita
             $cita = Cita::create($data);
 
