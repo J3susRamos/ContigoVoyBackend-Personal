@@ -13,7 +13,7 @@ class CitaPsicologo extends Mailable
 {
     use Queueable, SerializesModels;
 
-          public array $datos;
+    public array $datos;
     public $jitsi_url;
 
     /**
@@ -30,8 +30,8 @@ class CitaPsicologo extends Mailable
      */
     public function envelope(): Envelope
     {
-      return new Envelope(
-            subject: '🌿¡Cita con el paciente! 💜',
+        return new Envelope(
+            subject: '🌿¡Cita con el paciente! 💜 ' . ($this->datos['nombrePaciente'] ?? ''),
         );
     }
 

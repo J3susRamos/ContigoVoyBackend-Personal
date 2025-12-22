@@ -60,15 +60,38 @@ class EnviarConfirmacionCitaCorreo
             $fecha = Carbon::parse($this->cita->fecha_cita)->format('Y-m-d');
             $hora = Carbon::parse($this->cita->hora_cita)->format('H:i');
 
+            $motivo = $this->cita->motivo_Consulta;
+
+
+            // Mapeo de enfoques
+            $mapeoEnfoques = [
+                'niños' => 'Pediatra',
+                'adolescentes' => 'Pedagogo',
+                'familiar' => 'Psicoanalista',
+                'pareja' => 'Terapeuta',
+                'adulto' => 'Conductual'
+            ];
+
+            // Obtener tipo de consulta desde la cita
+            $tipoConsulta = $this->cita->tipo_consulta ?? null;
+
+            // Determinar título del psicólogo según el tipo de consulta
+            $tituloPsicologo = $mapeoEnfoques[$tipoConsulta] ?? $this->cita->psicologo->titulo ?? 'General';
+
+
             // Correo al admin (opcional)
             $adminEmail = config('emails.admin_address', 'contigovoyproject@gmail.com');
             Mail::to($adminEmail)->send(
-                new ConfirmacionPrePaciente([
-                    'nombre' => $nombre,
-                    'fecha' => $fecha,
-                    'hora' => $hora,
-                    'psicologo' => $nombrePsicologo,
-                ], $this->cita->jitsi_url)
+                new ConfirmacionPrePaciente(
+                    [
+                        'nombre' => $nombre,
+                        'fecha' => $fecha,
+                        'hora' => $hora,
+                        'psicologo' => $nombrePsicologo,
+                    ],
+                    $motivo,
+                    $this->cita->jitsi_url
+                )
             );
 
             // Correo al psicólogo
@@ -91,13 +114,14 @@ class EnviarConfirmacionCitaCorreo
                         'fecha' => $fecha,
                         'hora' => $hora,
                         'psicologo' => $nombrePsicologo,
+                        'tituloPsicologo' => $tituloPsicologo,
+                        'motivo' => $motivo,
                     ], $this->cita->jitsi_url)
                 );
                 Log::info('Correo enviado al psicólogo correctamente', ['cita_id' => $this->cita->idCita]);
             } else {
                 Log::warning('No se pudo enviar correo al psicólogo: email no encontrado', ['cita_id' => $this->cita->idCita]);
             }
-
         } catch (\Exception $e) {
             Log::error('Error enviando confirmación de cita por correo', [
                 'cita_id' => $this->cita->idCita ?? null,

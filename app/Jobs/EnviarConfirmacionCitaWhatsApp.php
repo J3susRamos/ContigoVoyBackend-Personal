@@ -67,16 +67,10 @@ class EnviarConfirmacionCitaWhatsApp
                     $nombrePsicologo,
                     $fechaFormateada,
                     $horaFormateada,
-                    $nombrePaciente
+                    $nombrePaciente,
+                    $jitsi_url
                 );
 
-                if ($jitsi_url) {
-                    $mensajeLinkPaciente =
-                        "✅ Tu cita está confirmada.\n\n" .
-                        "Ingresa a la reunion: {$jitsi_url}\n\n" .
-                        "Nos vemos pronto 💜";
-                    $whatsappService->sendTextMessage($phonePaciente, $mensajeLinkPaciente);
-                }
             }
         } catch (\Throwable $th) {
             Log::error('Error al enviar confirmación de cita por WhatsApp al paciente', [
@@ -92,18 +86,24 @@ class EnviarConfirmacionCitaWhatsApp
                 $telefonoPsicologo = preg_replace('/\s+/', '', $this->cita->psicologo->celular);
 
                 $mensajePsicologo =
-                    "Hola {$nombrePsicologo}, se ha registrado una nueva cita.\n\n" .
-                    "👤 Paciente: {$nombrePaciente}\n" .
+                    "📢 Nueva cita agendada 📅\n\n" .
+                    "Hola, {$nombrePsicologo} 👋\n" .
+                    "Se ha registrado una nueva cita a través de la página web.\n\n" .
+                    "📝 Detalles de la cita:\n" .
+                    "✨ Paciente: {$nombrePaciente}\n" .
                     "📅 Fecha: {$fechaMostrar}\n" .
-                    "⏰ Hora: {$horaFormateada}\n";
+                    "⏰ Hora: {$horaFormateada}\n\n";
 
                 // ✅ Agregar link si existe
                 if ($jitsi_url) {
-                    $mensajePsicologo .= "\nIngresa a la reunion: {$jitsi_url}\n";
+                    $mensajePsicologo .=
+                        "🎥 Enlace a la reunión:\n" .
+                        "👉 {$jitsi_url}\n\n";
                 }
 
                 $mensajePsicologo .=
-                    "\nPuedes revisar más detalles en tu panel de Contigo Voy.";
+                    "🔔 Acción requerida:\n" .
+                    "Por favor, revisa tu agenda y confirma tu disponibilidad para esta cita.";
 
                 $whatsappService->sendTextMessage($telefonoPsicologo, $mensajePsicologo);
             }
@@ -114,5 +114,6 @@ class EnviarConfirmacionCitaWhatsApp
                 'error' => $th->getMessage(),
             ]);
         }
+
     }
 }

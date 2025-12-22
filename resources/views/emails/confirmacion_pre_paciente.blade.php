@@ -114,18 +114,20 @@
         <div class="header">
             <h1>¡Confirmación de tu primera cita!</h1>
         </div>
-        <div class="content">
-            <p>Hola <span class="highlight">{{ $datos['nombre'] ?? 'Paciente' }}</span>,</p>
-            <p>Nos alegra acompañarte en este proceso de crecimiento personal. 🌱</p>
-            <p>Gracias por confiar en <strong>Centro Psicológico Contigo Voy</strong>.</p>
+        <div class="content" style="font-style: italic; font-size: 18px">
+            <img src="{{ asset('storage/contigovoy.jpg') }}"
+                alt="Centro Psicologico Contigo Voy" style="width: 100%; border-radius: 8px; margin-bottom: 20px;">
+            <p>Hola <span class="highlight">{{ $datos['nombre'] ?? 'Paciente' }} 💙</span>,</p>
+            <p>Nos alegra acompañarte en este proceso de crecimiento personal. </p>
+            <p>Gracias por confiar en <strong>Centro Psicológico Contigo Voy 🌱</strong>.</p>
             <p>A continuación encontrarás los detalles:</p>
 
-            <div class="info-box">
+            <div class="info-box" style="font-style: normal">
                 <ul>
                     <li><strong>📅 Fecha:</strong> {{ $datos['fecha'] ?? 'No disponible' }}</li>
                     <li><strong>🕒 Hora:</strong> {{ $datos['hora'] ?? 'No disponible' }}</li>
                     <li><strong>🧠 Psicólogo:</strong> {{ $datos['psicologo'] ?? 'No disponible' }}</li>
-                    @if(!empty($jitsi_url))
+                    @if (!empty($jitsi_url))
                         <li><strong>💻 Enlace de Cita:</strong> <a href="{{ $jitsi_url }}"
                                 target="_blank">{{ $jitsi_url }}</a></li>
                     @endif
@@ -133,11 +135,19 @@
                 </ul>
             </div>
 
-            <div class="cta">
-                <a href="https://centropsicologicocontigovoy.com/">Visitar nuestra plataforma</a>
+            <div class="cta" style="text-align: left">
+                Si deseas contactarnos directamente, puedes hacerlo a través de los siguientes números:
+                <div style="margin-top: 15px; line-height: 1.8; text-align: left;">
+                    <div style="font-style: italic; font-size: 18px;">
+                        📞 (01) 123 4567
+                    </div>
+                    <div style="font-style: italic; font-size: 18px;">
+                        📱 987654321
+                    </div>
+                </div>
+
             </div>
 
-            <p>Nos comunicaremos contigo pronto para confirmar tu cita.</p>
         </div>
         <div class="footer">
             © {{ date('Y') }} Contigo Voy · Todos los derechos reservados

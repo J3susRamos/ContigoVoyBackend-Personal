@@ -39,6 +39,31 @@ class PsicologosController extends Controller
         $s = mb_strtolower($s, 'UTF-8');
         return mb_convert_case($s, MB_CASE_TITLE, 'UTF-8');
     }
+    private function parseFechaNacimiento(?string $value): ?string
+    {
+        if (!$value)
+            return null;
+
+        // 1) Intentar YYYY-MM-DD
+        try {
+            return Carbon::createFromFormat('Y-m-d', $value)->format('Y-m-d');
+        } catch (\Exception $e) {
+        }
+
+        // 2) Intentar DD/MM/YYYY
+        try {
+            return Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
+        } catch (\Exception $e) {
+        }
+
+        // 3) Intentar parseo libre (por si viene ISO con hora)
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $e) {
+        }
+
+        return null;
+    }
 
     public function createPsicologo(PostPsicologo $requestPsicologo, PostUser $requestUser): JsonResponse
     {
@@ -108,9 +133,11 @@ class PsicologosController extends Controller
         }
     }
 
-    public function showById(int $id): JsonResponse
+    public function showById($id): JsonResponse
     {
         try {
+            $id = (int) $id;
+
             $psicologo = Psicologo::with(['especialidades', 'idiomas', 'users'])->find($id);
 
             if (!$psicologo) {
@@ -127,9 +154,12 @@ class PsicologosController extends Controller
                 'pais' => $psicologo->pais,
                 'genero' => $psicologo->genero,
                 'correo' => $psicologo->users->email,
-                'contraseña' => $psicologo->users->password,
+                // 'contraseña' => $psicologo->users->password,
                 'imagen' => $psicologo->users->imagen,
-                'fecha_nacimiento' => $psicologo->users->fecha_nacimiento?->format('d/m/Y'),
+
+                // Devuélvela en formato input type="date"
+                'fecha_nacimiento' => $psicologo->users->fecha_nacimiento?->format('Y-m-d'),
+
                 'especialidades' => $psicologo->especialidades->pluck('nombre'),
                 'idiomas' => $psicologo->idiomas->pluck('nombre'),
                 'introduccion' => $psicologo->introduccion,
@@ -146,6 +176,7 @@ class PsicologosController extends Controller
                 ->send();
         }
     }
+
 
     public function showAllPsicologos(Request $request): JsonResponse
     {
@@ -424,7 +455,10 @@ class PsicologosController extends Controller
                 $usuarioData['password'] = Hash::make($requestUser->password);
             }
             if ($requestUser->filled('fecha_nacimiento')) {
-                $usuarioData['fecha_nacimiento'] = Carbon::createFromFormat('d/m/Y', $requestUser->fecha_nacimiento)->format('Y-m-d');
+                $parsed = $this->parseFechaNacimiento($requestUser->fecha_nacimiento);
+                if ($parsed) {
+                    $usuarioData['fecha_nacimiento'] = $parsed;
+                }
             }
             $usuario->update($usuarioData);
 
@@ -483,8 +517,13 @@ class PsicologosController extends Controller
                 $usuarioData['apellido'] = $request->input('apellido');
             if ($request->filled('imagen'))
                 $usuarioData['imagen'] = $request->input('imagen');
-            if ($request->filled('fecha_nacimiento'))
-                $usuarioData['fecha_nacimiento'] = $request->input('fecha_nacimiento');
+            if ($request->filled('fecha_nacimiento')) {
+                $parsed = $this->parseFechaNacimiento($request->input('fecha_nacimiento'));
+                if ($parsed) {
+                    $usuarioData['fecha_nacimiento'] = $parsed;
+                }
+            }
+
             if (!empty($usuarioData))
                 $usuario->update($usuarioData);
 

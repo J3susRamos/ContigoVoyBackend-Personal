@@ -38,6 +38,7 @@ class PostCita extends FormRequest
             'colores' => 'nullable|string',
             'duracion' => 'nullable|integer|min:0',
             'jitsi_url' => 'nullable|string',
+            'tipo_consulta' => 'required|string|in:niños,adolescentes,familiar,pareja,adulto',
 
 
             'fecha_cita' => [
@@ -45,7 +46,7 @@ class PostCita extends FormRequest
                     $exists = Cita::where('fecha_cita', $value)
                         ->where('hora_cita', request('hora_cita'))
                         ->exists();
-    
+
                     if ($exists) {
                         $fail('Ya existe una cita programada en esta fecha y hora.');
                     }
