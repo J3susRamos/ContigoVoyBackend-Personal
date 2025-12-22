@@ -83,6 +83,11 @@ class BlogController extends Controller
                     'tema' => $blog->tema,
                     'slug' => $blog->slug,
                     'contenido' => Str::limit($blog->contenido, 150),
+
+                    'metaTitle' => $blog->metadata?->metaTitle,
+                    'metaDescription' => $blog->metadata?->metaDescription,
+                    'keywords' => $blog->metadata?->keywords,
+
                     'imagenes' => $blog->imagenes, // Array de imágenes
                     'imagen' => $blog->imagenes[0] ?? null, // Primera imagen para compatibilidad
                     'imagenesMeta' => $blog->images->map(function ($img) {
@@ -123,6 +128,11 @@ class BlogController extends Controller
                 'tema' => $blog->tema,
                 'slug' => $blog->slug,
                 'contenido' => $blog->contenido,
+
+                'metaTitle' => $blog->metadata?->metaTitle,
+                'metaDescription' => $blog->metadata?->metaDescription,
+                'keywords' => $blog->metadata?->keywords,
+
                 'imagenes' => $blog->imagenes, // Array de imágenes
                 'imagenesMeta' => $blog->images->map(function ($img) {
                     return [
@@ -188,6 +198,11 @@ class BlogController extends Controller
                 'idPsicologo' => $blog->idPsicologo,
                 'categoria' => $blog->categoria?->nombre,
                 'fecha' => $blog->fecha_publicado,
+
+                'metaTitle' => $blog->metadata?->metaTitle,
+                'metaDescription' => $blog->metadata?->metaDescription,
+                'keywords' => $blog->metadata?->keywords,
+
                 'imagenesMeta' => $blog->images->map(function ($img) {
                     return [
                         'id' => $img->id,
