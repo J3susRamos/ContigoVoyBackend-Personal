@@ -135,16 +135,16 @@ class WhatsAppService
      */
     public function sendTextMessage(string $to, string $message): array
     {
-        // Usar endpoint de send-message-accept para mensajes personalizados
-        $url = "{$this->baseUrl}/api/send-message-accept";
+        $url = "{$this->baseUrl}/api/send-text";
 
         $payload = [
-            "telefono" => $this->formatPhoneNumber($to),
-            "comentario" => $message,
+            "phone" => $this->formatPhoneNumber($to),
+            "message" => $message,
         ];
 
         return $this->makeRequest($url, $payload, "POST");
     }
+
 
     /**
      * Enviar mensaje con template para citas
@@ -155,7 +155,8 @@ class WhatsAppService
         string $fecha,
         string $hora,
         string $templateOption = "confirmation",
-        ?string $nombre = null
+        ?string $nombre = null,
+        ?string $jitsi_url = null
     ): array {
         $url = "{$this->baseUrl}/api/send-message";
 
@@ -173,23 +174,25 @@ class WhatsAppService
             "hora" => $hora,
         ];
 
-        if ($nombre) {
-            $payload['nombre'] = $nombre;
-        }
+        if ($nombre)
+            $payload["nombre"] = $nombre;
+        if ($jitsi_url)
+            $payload["jitsi_url"] = $jitsi_url; // ✅ NUEVO
 
         return $this->makeRequest($url, $payload, "POST");
     }
 
-
     /**
      * Enviar mensaje de confirmación de cita
      */
+
     public function sendConfirmationMessage(
         string $to,
         string $psicologo,
         string $fecha,
         string $hora,
-        ?string $nombre = null
+        ?string $nombre = null,
+        ?string $jitsi_url = null
     ): array {
         return $this->sendAppointmentMessage(
             $to,
@@ -197,7 +200,8 @@ class WhatsAppService
             $fecha,
             $hora,
             "confirmation",
-            $nombre
+            $nombre,
+            $jitsi_url
         );
     }
 
