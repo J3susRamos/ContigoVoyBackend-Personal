@@ -28,8 +28,7 @@ class PrePacienteController extends Controller
             $prePacienteValidated = $request->validate([
                 "nombre" => "required|string|max:150",
                 "celular" => "required|string|min:3|max:30",
-                "correo" =>
-                    "required|email|max:150",
+                "correo" => "required|email|max:150",
                 "idPsicologo" => "required|exists:psicologos,idPsicologo",
             ]);
 
@@ -41,11 +40,22 @@ class PrePacienteController extends Controller
                 "idPsicologo" => "required|exists:psicologos,idPsicologo",
                 "fecha_cita" => "required|date",
                 "hora_cita" => "required|date_format:H:i",
+                "enfoque" => "required|in:niños,adolescentes,familiar,pareja,adulto",
             ]);
+
+              $mapeoEnfoques = [
+                'niños' => 'Niños',
+                'adolescentes' => 'Adolescentes',
+                'familiar' => 'Familiar',
+                'pareja' => 'Pareja',
+                'adulto' => 'Adulto',
+            ];
+
+            $motivo = ($mapeoEnfoques[$request->enfoque]);
 
             // Set defaults de la cita
             $citaData = array_merge($citaValidated, [
-                "motivo_Consulta" => "Primera cita gratis",
+                "motivo_Consulta" => "$motivo",
                 "idPrePaciente" => $id,
                 "jitsi_url" => "https://meet.jit.si/consulta_" . uniqid(),
                 "fecha_limite" => Carbon::parse($request->fecha_cita)->subDays(1)->format('Y-m-d'),
@@ -104,7 +114,7 @@ class PrePacienteController extends Controller
             return HttpResponseHelper::make()
                 ->internalErrorResponse(
                     "Ocurrió un problema al procesar la solicitud: " .
-                    $e->getMessage(),
+                        $e->getMessage(),
                 )
                 ->send();
         }
@@ -162,7 +172,7 @@ class PrePacienteController extends Controller
                     "nombre" => "required|string|max:150",
                     "celular" => "required|string|min:3|max:30",
                     "correo" =>
-                        "required|email|unique:pre_pacientes,correo|max:150",
+                    "required|email|unique:pre_pacientes,correo|max:150",
                 ]),
             );
 
