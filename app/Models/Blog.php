@@ -23,6 +23,7 @@ class Blog extends Model
         'slug',
         'contenido',
         'imagenes',
+        'imagenesMeta',
         'idPsicologo',
         'fecha_publicado',
         'blog_id',
@@ -31,6 +32,7 @@ class Blog extends Model
 
     protected $casts = [
         'imagenes' => 'array',
+        'imagenesMeta' => 'array',
     ];
 
     protected static function boot()
