@@ -40,4 +40,9 @@ return [
         "password" => env("WHATSAPP_SERVICE_PASSWORD", "admin123"),
         "timeout" => env("WHATSAPP_SERVICE_TIMEOUT", 30),
     ],
+        "github" => [
+        "token" => env("GITHUB_DEPLOY_TOKEN"),
+        "repo"  => env("GITHUB_REPO"),
+    ],
+
 ];
