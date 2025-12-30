@@ -13,6 +13,7 @@ use App\Models\Psicologo;
 use Illuminate\Support\Str;
 use App\Traits\HttpResponseHelper;
 use Illuminate\Http\JsonResponse;
+use App\Services\GitHubDeployService;
 
 
 
@@ -62,6 +63,7 @@ class BlogController extends Controller
             }
 
 
+            GitHubDeployService::dispatch('createBlog');
 
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog creado correctamente')
@@ -279,8 +281,6 @@ class BlogController extends Controller
                 ->internalErrorResponse('Ocurrió un problema al obtener el blog: ' . $e->getMessage())
                 ->send();
         }
-
-
     }
 
     public function showAllAuthors(): JsonResponse
@@ -382,10 +382,12 @@ class BlogController extends Controller
             // Volvemos a cargar las relaciones actualizadas
             $blog->load(['metadata', 'images']);
 
+            GitHubDeployService::dispatch('blog_updated');
+
+
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog actualizado correctamente')
                 ->send();
-
         } catch (\Exception $e) {
             \Log::error('Error al actualizar blog:', ['error' => $e->getMessage()]);
             return HttpResponseHelper::make()
@@ -418,6 +420,7 @@ class BlogController extends Controller
 
             $blog->delete();
 
+            GitHubDeployService::dispatch('blog_deleted');
             return HttpResponseHelper::make()
                 ->successfulResponse('Blog eliminado correctamente')
                 ->send();
