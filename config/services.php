@@ -45,4 +45,9 @@ return [
         "repo"  => env("GITHUB_REPO"),
     ],
 
+        'culqi' => [
+        'secret' => env('CULQI_PRIVATE_KEY'),
+        'public' => env('CULQI_PUBLIC_KEY'),
+    ],
+
 ];

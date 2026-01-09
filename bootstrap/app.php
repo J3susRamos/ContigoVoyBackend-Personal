@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
+        
+        // Exclusion de la ruta de culqi
+        $middleware->validateCsrfTokens(except: [
+            'api/pagos/culqi/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
