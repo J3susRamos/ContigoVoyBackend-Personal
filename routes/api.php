@@ -27,6 +27,7 @@ use App\Http\Controllers\NotificationAdminController;
 use App\Http\Controllers\PersonalPermissionController; //<--Agregado M.
 use App\Http\Controllers\Idioma\IdiomaController;
 
+use App\Http\Controllers\Pagos\CulqiController;
 use App\Http\Controllers\GoogleCalendarController;
 
 
@@ -512,6 +513,16 @@ Route::controller(DisponibilidadController::class)
     });
 
 
+    // Pagos Culqi
+    Route::controller(CulqiController::class)
+    ->prefix("pagos")
+    ->group(function () {
+
+        Route::post("/culqi/cargo", "crearCargo");
+
+    });
+    
 // ====== GOOGLE CALENDAR ======
 //Route::get("/calendar/test", [GoogleCalendarController::class, "test"]);
 //Route::get("/calendar/verificar", [GoogleCalendarController::class, "verificarConfiguracion"]);
+
