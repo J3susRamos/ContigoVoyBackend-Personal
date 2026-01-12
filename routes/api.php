@@ -519,6 +519,8 @@ Route::controller(DisponibilidadController::class)
     ->group(function () {
 
         Route::post("/culqi/cargo", "crearCargo");
+        Route::post("/culqi/qr", "crearOrdenQR");  // crear orden de pago con QR
+        Route::post("/culqi/webhook", "webhook");  // confirmación pago
 
     });
     
